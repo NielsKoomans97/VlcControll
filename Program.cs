@@ -30,15 +30,17 @@ internal class Program
             AutoReconnect = true,
             MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
         };
+
         var client = new DiscordClient(clientConfig);
+        using var httpClient = new HttpClient();
+        var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
 
         client.MessageCreated += async (s, e) =>
         {
             if (e.Message.Content.StartsWith('!'))
             {
-                using var httpClient = new HttpClient();
-                var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
-                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                await e.Channel.TriggerTypingAsync();
 
                 string _baseUrl = "http://192.168.2.161:8080/status.json?command=";
 
@@ -86,17 +88,17 @@ internal class Program
                         {
                             builder.AppendLine();
                             builder.AppendLine($"{obj?.information.category.meta.showName}");
-                            builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}**   Episode **{obj?.information.category.meta.episodeNumber}**");
+                            builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}** __*[]*__ Episode **{obj?.information.category.meta.episodeNumber}**");
                             var ts = TimeSpan.FromSeconds((long)obj?.time);
                             var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
                         }
                         else
                         {
                             builder.AppendLine($"{obj?.information.category.meta.filename}");
                             var ts = TimeSpan.FromSeconds((long)obj?.time);
                             var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
                         }
 
                         var embedbuilder = new DiscordEmbedBuilder()
@@ -122,17 +124,17 @@ internal class Program
                         {
                             builder.AppendLine();
                             builder.AppendLine($"{obj?.information.category.meta.showName}");
-                            builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}**   Episode **{obj?.information.category.meta.episodeNumber}**");
+                            builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}** __*[]*__ Episode **{obj?.information.category.meta.episodeNumber}**");
                             var ts = TimeSpan.FromSeconds((long)obj?.time);
                             var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
                         }
                         else
                         {
                             builder.AppendLine($"{obj?.information.category.meta.filename}");
                             var ts = TimeSpan.FromSeconds((long)obj?.time);
                             var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
                         }
 
                         var embedbuilder = new DiscordEmbedBuilder()
@@ -187,7 +189,7 @@ internal class Program
 
                             builder.AppendLine($"Observations for **{locationName}**");
                             builder.AppendLine();
-                            builder.AppendLine($"Sunrise: **{FixInt(day0.Sunrise.Hour)}:{FixInt(day0.Sunrise.Minute)}** __*//*__ Sunset: **{FixInt(day0.Sunset.Hour)}:{FixInt(day0.Sunset.Minute)}**");
+                            builder.AppendLine($"Sunrise: **{FixInt(day0.Sunrise.Hour)}:{FixInt(day0.Sunrise.Minute)}** __*[]*__ Sunset: **{FixInt(day0.Sunset.Hour)}:{FixInt(day0.Sunset.Minute)}**");
                             builder.AppendLine();
                             builder.AppendLine("**Temperature (°C)**");
                             builder.AppendLine($"Temperature: **{obj?.temperature}°**");
@@ -262,15 +264,15 @@ internal class Program
                     builder2.AppendLine();
                     builder2.AppendLine("\nVLCController (ofwel niels-bot) *v0.1*\n");
                     builder2.AppendLine("Commands: ");
-                    builder2.AppendLine("**!skip** __*//*__ Skip to next item in the playlist");
-                    builder2.AppendLine("**!previous** __*//*__  Go to previous item in the playlist");
-                    builder2.AppendLine("**!pause** __*//*__  Pause playback");
-                    builder2.AppendLine("**!play** __*//*__ Start/resume playback");
-                    builder2.AppendLine("**!info** __*//*__ Show current playback information");
-                    builder2.AppendLine("**!help** __*//*__ Shows this overview");
-                    builder2.AppendLine("**!weather [location name]** __*//*__ Shows basic weather information for [location name]");
-                    builder2.AppendLine("**!radar** __*//*__ Gets most recent radar image");
-                    builder2.AppendLine("**!satellite** __*//*__ Get most recent satellite image");
+                    builder2.AppendLine("**!skip** __*[]*__ Skip to next item in the playlist");
+                    builder2.AppendLine("**!previous** __*[]*__  Go to previous item in the playlist");
+                    builder2.AppendLine("**!pause** __*[]*__  Pause playback");
+                    builder2.AppendLine("**!play** __*[]*__ Start/resume playback");
+                    builder2.AppendLine("**!info** __*[]*__ Show current playback information");
+                    builder2.AppendLine("**!help** __*[]*__ Shows this overview");
+                    builder2.AppendLine("**!weather [location name]** __*[]*__ Shows basic weather information for [location name]");
+                    builder2.AppendLine("**!radar** __*[]*__ Gets most recent radar image");
+                    builder2.AppendLine("**!satellite** __*[]*__ Get most recent satellite image");
                     builder2.AppendLine("\n\n");
 
                     var embedBuilder = new DiscordEmbedBuilder()
@@ -286,6 +288,9 @@ internal class Program
         await client.ConnectAsync();
 
         await Task.Delay(-1);
+
+        client.Dispose();
+        httpClient.Dispose();
     }
 
     public static string GetWeatherText(string icon)
