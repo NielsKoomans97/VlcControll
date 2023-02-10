@@ -180,16 +180,23 @@ internal class Program
                             var text = await response.Content.ReadAsStringAsync();
                             var obj = JsonConvert.DeserializeObject<dynamic>(text);
 
+                            response = await httpClient.GetAsync($"https://forecast.buienradar.nl/2.0/forecast/{locationId}");
+                            text = await response.Content.ReadAsStringAsync();
+                            var forecast = JsonConvert.DeserializeObject<Forecast>(text);
+                            var day0 = forecast?.Items[0];
+
                             builder.AppendLine($"Observations for **{locationName}**");
+                            builder.AppendLine();
+                            builder.AppendLine($"Sunrise: **{FixInt(day0.Sunrise.Hour)}:{FixInt(day0.Sunrise.Minute)}** __*//*__ Sunset: **{FixInt(day0.Sunset.Hour)}:{FixInt(day0.Sunset.Minute)}**");
                             builder.AppendLine();
                             builder.AppendLine("**Temperature (°C)**");
                             builder.AppendLine($"Temperature: **{obj?.temperature}°**");
-                            builder.AppendLine($"Feeltemperature: **{obj?.feeltemperature}°**");
-                            builder.AppendLine($"Groundtemperature: **{obj?.groundtemperature}°**");
+                            builder.AppendLine($"Feel temperature: **{obj?.feeltemperature}°**");
+                            builder.AppendLine($"Ground temperature: **{obj?.groundtemperature}°**");
                             builder.AppendLine();
                             builder.AppendLine("**Wind**");
-                            builder.AppendLine($"Windspeed: **{obj?.windspeedBft} Bft**");
-                            builder.AppendLine($"Winddirection: **{obj?.winddirection}**");
+                            builder.AppendLine($"Wind speed: **{obj?.windspeedBft} Bft**");
+                            builder.AppendLine($"Wind direction: **{obj?.winddirection}**");
                             builder.AppendLine($"Wind gusts: **{obj?.windgusts} m/s**");
                             builder.AppendLine();
                             builder.AppendLine("**Other atmospheric properties**");
@@ -203,17 +210,11 @@ internal class Program
                             builder.AppendLine($"Rainfall last 24 hours: **{obj?.rainFallLast24Hour} mm**");
                             builder.AppendLine($"Rainfall last hour: **{obj?.rainFallLastHour} mm**");
                             builder.AppendLine();
-
-                            response = await httpClient.GetAsync($"https://forecast.buienradar.nl/2.0/forecast/{locationId}");
-                            text = await response.Content.ReadAsStringAsync();
-                            var forecast = JsonConvert.DeserializeObject<Forecast>(text);
-                            var day0 = forecast?.Items[0];
-
                             builder.AppendLine("**Forecast per hour**");
                             foreach (var hour in day0.Hours)
                             {
-                                builder.AppendLine($"**{FixInt(hour.DateTime.Hour)}:{FixInt(hour.DateTime.Minute)}** - **{GetWeatherText(hour.IconCode)}**");
-                                builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from **{hour.WindDirection}**, Precipitation: **{hour.PrecipitationMm} mm**");
+                                builder.AppendLine($"**{FixInt(hour.DateTime.Hour)}:{FixInt(hour.DateTime.Minute)}** - **{GetWeatherText(hour.IconCode)}** - Cloud cover: **{hour.CloudCover}%**");
+                                builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from the **{hour.WindDirection}**, Precipitation: **{hour.PrecipitationMm} mm**");
                                 builder.AppendLine();
                             }
                             builder.AppendLine();
@@ -246,19 +247,30 @@ internal class Program
 
                     await e.Channel.SendMessageAsync(embed: builder);
                 }
+                if (e.Message.Content.StartsWith("!satellite"))
+                {
+                    var builder = new DiscordEmbedBuilder()
+                    {
+                        ImageUrl = "https://cdn.knmi.nl/knmi/map/page/weer/actueel-weer/satelliet/satlast.jpg"
+                    };
+
+                    await e.Channel.SendMessageAsync(embed: builder);
+                }
                 if (e.Message.Content.StartsWith("!help"))
                 {
                     var builder2 = new StringBuilder();
                     builder2.AppendLine();
                     builder2.AppendLine("\nVLCController (ofwel niels-bot) *v0.1*\n");
                     builder2.AppendLine("Commands: ");
-                    builder2.AppendLine("**!skip** __*||*__ Skip to next item in the playlist");
-                    builder2.AppendLine("**!previous** __*||*__  Go to previous item in the playlist");
-                    builder2.AppendLine("**!pause** __*||*__  Pause playback");
-                    builder2.AppendLine("**!play** __*||*__ Start/resume playback");
-                    builder2.AppendLine("**!info** __*||*__ Show current playback information");
-                    builder2.AppendLine("**!help** __*||*__ Shows this overview");
-                    builder2.AppendLine("**!weather [location name]** __*||*__ Shows basic weather information for [location name]");
+                    builder2.AppendLine("**!skip** __*//*__ Skip to next item in the playlist");
+                    builder2.AppendLine("**!previous** __*//*__  Go to previous item in the playlist");
+                    builder2.AppendLine("**!pause** __*//*__  Pause playback");
+                    builder2.AppendLine("**!play** __*//*__ Start/resume playback");
+                    builder2.AppendLine("**!info** __*//*__ Show current playback information");
+                    builder2.AppendLine("**!help** __*//*__ Shows this overview");
+                    builder2.AppendLine("**!weather [location name]** __*//*__ Shows basic weather information for [location name]");
+                    builder2.AppendLine("**!radar** __*//*__ Gets most recent radar image");
+                    builder2.AppendLine("**!satellite** __*//*__ Get most recent satellite image");
                     builder2.AppendLine("\n\n");
 
                     var embedBuilder = new DiscordEmbedBuilder()
@@ -321,10 +333,19 @@ public class ForecastItem
 {
     [JsonProperty("hours")]
     public Hour[] Hours { get; set; }
+
+    [JsonProperty("sunset")]
+    public DateTime Sunset { get; set; }
+
+    [JsonProperty("sunrise")]
+    public DateTime Sunrise { get; set; }
 }
 
 public class Hour
 {
+    [JsonProperty("cloudcover")]
+    public int CloudCover { get; set; }
+
     [JsonProperty("datetime")]
     public DateTimeOffset DateTime { get; set; }
 
