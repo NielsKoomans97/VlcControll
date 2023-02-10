@@ -25,7 +25,7 @@ internal class Program
         var clientConfig = new DiscordConfiguration()
         {
             Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.Guilds,
-            Token = "MTA2MzEyMTk2NDA0ODMyMjU5Mg.Gb2Qpv._mC_qfkJuAmoYtBfD7C_J5mXP8mqO3aLLIESGI",
+            Token = "MTA2MzEyMTk2NDA0ODMyMjU5Mg.G7txjC.1TtpnqneHypYO0gXC5f6E9nlYKHErKwDCq8BAI",
             TokenType = TokenType.Bot,
             AutoReconnect = true,
             MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
@@ -36,239 +36,237 @@ internal class Program
         {
             if (e.Message.Content.StartsWith('!'))
             {
-                using (var httpClient = new HttpClient())
+                using var httpClient = new HttpClient();
+                var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+
+                string _baseUrl = "http://192.168.2.161:8080/status.json?command=";
+
+                if (e.Message.Content.StartsWith("!skip"))
                 {
-                    var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
-                    httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+                    var response = await httpClient.GetAsync($"{_baseUrl}pl_next");
 
-                    string _baseUrl = "http://192.168.2.161:8080/status.json?command=";
-
-                    if (e.Message.Content.StartsWith("!skip"))
+                    if (response.IsSuccessStatusCode)
                     {
-                        var response = await httpClient.GetAsync($"{_baseUrl}pl_next");
-
-                        if (response.IsSuccessStatusCode)
-                        {
-                            await e.Channel.SendMessageAsync("Skipped");
-                        }
-                        response.Dispose();
+                        await e.Channel.SendMessageAsync("Skipped");
                     }
-                    if (e.Message.Content.StartsWith("!previous"))
-                    {
-                        var response = await httpClient.GetAsync($"{_baseUrl}pl_previous");
+                    response.Dispose();
+                }
+                if (e.Message.Content.StartsWith("!previous"))
+                {
+                    var response = await httpClient.GetAsync($"{_baseUrl}pl_previous");
 
-                        if (response.IsSuccessStatusCode)
-                        {
-                            await e.Channel.SendMessageAsync("Previous item");
-                        }
-                        response.Dispose();
+                    if (response.IsSuccessStatusCode)
+                    {
+                        await e.Channel.SendMessageAsync("Previous item");
                     }
-                    if (e.Message.Content.StartsWith("!pause"))
-                    {
-                        var response = await httpClient.GetAsync($"{_baseUrl}pl_pause");
+                    response.Dispose();
+                }
+                if (e.Message.Content.StartsWith("!pause"))
+                {
+                    var response = await httpClient.GetAsync($"{_baseUrl}pl_pause");
 
-                        if (response.IsSuccessStatusCode)
-                        {
-                            await e.Channel.SendMessageAsync("Paused");
-                        }
-                        response.Dispose();
+                    if (response.IsSuccessStatusCode)
+                    {
+                        await e.Channel.SendMessageAsync("Paused");
                     }
-                    if (e.Message.Content.StartsWith("!play"))
+                    response.Dispose();
+                }
+                if (e.Message.Content.StartsWith("!play"))
+                {
+                    var response = await httpClient.GetAsync($"{_baseUrl}pl_play");
+
+                    if (response.IsSuccessStatusCode)
                     {
-                        var response = await httpClient.GetAsync($"{_baseUrl}pl_play");
+                        var content = await response.Content.ReadAsStringAsync();
+                        var obj = JsonConvert.DeserializeObject<dynamic>(content);
+                        var builder = new StringBuilder();
+
+                        if (obj?.information.category.meta.episodeNumber != null)
+                        {
+                            builder.AppendLine();
+                            builder.AppendLine($"{obj?.information.category.meta.showName}");
+                            builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}**   Episode **{obj?.information.category.meta.episodeNumber}**");
+                            var ts = TimeSpan.FromSeconds((long)obj?.time);
+                            var tsl = TimeSpan.FromSeconds((long)obj?.length);
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                        }
+                        else
+                        {
+                            builder.AppendLine($"{obj?.information.category.meta.filename}");
+                            var ts = TimeSpan.FromSeconds((long)obj?.time);
+                            var tsl = TimeSpan.FromSeconds((long)obj?.length);
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                        }
+
+                        var embedbuilder = new DiscordEmbedBuilder()
+                        {
+                            Description = builder.ToString(),
+                        };
+
+                        await e.Channel.SendMessageAsync(embedbuilder);
+                    }
+                    response.Dispose();
+                }
+                if (e.Message.Content.StartsWith("!info"))
+                {
+                    var response = await httpClient.GetAsync($"{_baseUrl}");
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        var obj = JsonConvert.DeserializeObject<dynamic>(content);
+                        var builder = new StringBuilder();
+
+                        if (obj?.information.category.meta.episodeNumber != null)
+                        {
+                            builder.AppendLine();
+                            builder.AppendLine($"{obj?.information.category.meta.showName}");
+                            builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}**   Episode **{obj?.information.category.meta.episodeNumber}**");
+                            var ts = TimeSpan.FromSeconds((long)obj?.time);
+                            var tsl = TimeSpan.FromSeconds((long)obj?.length);
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                        }
+                        else
+                        {
+                            builder.AppendLine($"{obj?.information.category.meta.filename}");
+                            var ts = TimeSpan.FromSeconds((long)obj?.time);
+                            var tsl = TimeSpan.FromSeconds((long)obj?.length);
+                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
+                        }
+
+                        var embedbuilder = new DiscordEmbedBuilder()
+                        {
+                            Description = builder.ToString(),
+                        };
+
+                        await e.Channel.SendMessageAsync(embedbuilder);
+                    }
+
+                    response.Dispose();
+                }
+                if (e.Message.Content.StartsWith("!weather"))
+                {
+                    var parts = e.Message.Content.Split(" ");
+                    if (parts.Length > 0)
+                    {
+                        Console.WriteLine(string.Join(" ", parts[1..parts.Length]));
+
+                        var builder = new StringBuilder();
+                        var response = await httpClient.GetAsync($"https://location.buienradar.nl/1.1/location/search?query={string.Join(" ", parts[1..parts.Length])}");
+                        long? stationId = 0;
+                        var locationName = string.Empty;
+                        long? locationId = 0;
 
                         if (response.IsSuccessStatusCode)
                         {
-                            var content = await response.Content.ReadAsStringAsync();
-                            var obj = JsonConvert.DeserializeObject<dynamic>(content);
-                            var builder = new StringBuilder();
+                            var text = await response.Content.ReadAsStringAsync();
+                            var obj = JsonConvert.DeserializeObject<SearchItem[]>(text);
 
-                            if (obj?.information.category.meta.episodeNumber != null)
+                            stationId = obj?[0].StationId;
+
+                            locationName = obj?[0].Name;
+
+                            locationId = obj?[0].LocationId;
+                        }
+                        else
+                        {
+                            throw new Exception("**<!>** Could not find any weather stations close to given location");
+                        }
+
+                        response = await httpClient.GetAsync($"https://observations.buienradar.nl/1.0/actual/weatherstation/{stationId}");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var text = await response.Content.ReadAsStringAsync();
+                            var obj = JsonConvert.DeserializeObject<dynamic>(text);
+
+                            builder.AppendLine($"Observations for **{locationName}**");
+                            builder.AppendLine();
+                            builder.AppendLine("**Temperature (°C)**");
+                            builder.AppendLine($"Temperature: **{obj?.temperature}°**");
+                            builder.AppendLine($"Feeltemperature: **{obj?.feeltemperature}°**");
+                            builder.AppendLine($"Groundtemperature: **{obj?.groundtemperature}°**");
+                            builder.AppendLine();
+                            builder.AppendLine("**Wind**");
+                            builder.AppendLine($"Windspeed: **{obj?.windspeedBft} Bft**");
+                            builder.AppendLine($"Winddirection: **{obj?.winddirection}**");
+                            builder.AppendLine($"Wind gusts: **{obj?.windgusts} m/s**");
+                            builder.AppendLine();
+                            builder.AppendLine("**Other atmospheric properties**");
+                            builder.AppendLine($"Air pressure: **{obj?.airpressure} hPa**");
+                            builder.AppendLine($"Visibility: **{obj?.visibility} m**");
+                            builder.AppendLine($"Humidity: **{obj?.humidity}%**");
+                            builder.AppendLine();
+                            builder.AppendLine("**Rain statistics**");
+                            builder.AppendLine($"Precipitation: **{obj?.precipitation} mm**");
+                            builder.AppendLine($"Precipation: **{obj?.precipation} mm**");
+                            builder.AppendLine($"Rainfall last 24 hours: **{obj?.rainFallLast24Hour} mm**");
+                            builder.AppendLine($"Rainfall last hour: **{obj?.rainFallLastHour} mm**");
+                            builder.AppendLine();
+
+                            response = await httpClient.GetAsync($"https://forecast.buienradar.nl/2.0/forecast/{locationId}");
+                            text = await response.Content.ReadAsStringAsync();
+                            var forecast = JsonConvert.DeserializeObject<Forecast>(text);
+                            var day0 = forecast?.Items[0];
+
+                            builder.AppendLine("**Forecast per hour**");
+                            foreach (var hour in day0.Hours)
                             {
+                                builder.AppendLine($"**{FixInt(hour.DateTime.Hour)}:{FixInt(hour.DateTime.Minute)}** - **{GetWeatherText(hour.IconCode)}**");
+                                builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from **{hour.WindDirection}**, Precipitation: **{hour.PrecipitationMm} mm**");
                                 builder.AppendLine();
-                                builder.AppendLine($"{obj?.information.category.meta.showName}");
-                                builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}**   Episode **{obj?.information.category.meta.episodeNumber}**");
-                                var ts = TimeSpan.FromSeconds((long)obj?.time);
-                                var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                                builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
                             }
-                            else
-                            {
-                                builder.AppendLine($"{obj?.information.category.meta.filename}");
-                                var ts = TimeSpan.FromSeconds((long)obj?.time);
-                                var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                                builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-                            }
+                            builder.AppendLine();
 
-                            var embedbuilder = new DiscordEmbedBuilder()
+                            builder.AppendLine("*Data provided by **Buienradar** *");
+
+                            var embedBuilder = new DiscordEmbedBuilder()
                             {
+                                Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail()
+                                {
+                                    Url = $"https://cdn.buienradar.nl/resources/images/icons/weather/116x116/{obj?.iconcode}.png",
+                                    Height = 117,
+                                    Width = 117
+                                },
                                 Description = builder.ToString(),
                             };
 
-                            await e.Channel.SendMessageAsync(embedbuilder);
-                        }
-                        response.Dispose();
-                    }
-                    if (e.Message.Content.StartsWith("!info"))
-                    {
-                        var response = await httpClient.GetAsync($"{_baseUrl}");
-
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var content = await response.Content.ReadAsStringAsync();
-                            var obj = JsonConvert.DeserializeObject<dynamic>(content);
-                            var builder = new StringBuilder();
-
-                            if (obj?.information.category.meta.episodeNumber != null)
-                            {
-                                builder.AppendLine();
-                                builder.AppendLine($"{obj?.information.category.meta.showName}");
-                                builder.AppendLine($"Season **{obj?.information.category.meta.seasonNumber}**   Episode **{obj?.information.category.meta.episodeNumber}**");
-                                var ts = TimeSpan.FromSeconds((long)obj?.time);
-                                var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                                builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-                            }
-                            else
-                            {
-                                builder.AppendLine($"{obj?.information.category.meta.filename}");
-                                var ts = TimeSpan.FromSeconds((long)obj?.time);
-                                var tsl = TimeSpan.FromSeconds((long)obj?.length);
-                                builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} __*||*__ {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-                            }
-
-                            var embedbuilder = new DiscordEmbedBuilder()
-                            {
-                                Description = builder.ToString(),
-                            };
-
-                            await e.Channel.SendMessageAsync(embedbuilder);
+                            await e.Channel.SendMessageAsync(embed: embedBuilder);
                         }
 
                         response.Dispose();
                     }
-                    if (e.Message.Content.StartsWith("!weather"))
+                }
+                if (e.Message.Content.StartsWith("!radar"))
+                {
+                    var builder = new DiscordEmbedBuilder()
                     {
-                        var parts = e.Message.Content.Split(" ");
-                        if (parts.Length > 0)
-                        {
-                            Console.WriteLine(string.Join(" ", parts[1..parts.Length]));
+                        ImageUrl = "https://cdn.knmi.nl/knmi/map/page/weer/actueel-weer/neerslagradar/WWWRADAR_loop.gif"
+                    };
 
-                            var builder = new StringBuilder();
-                            var response = await httpClient.GetAsync($"https://location.buienradar.nl/1.1/location/search?query={string.Join(" ", parts[1..parts.Length])}");
-                            long? stationId = 0;
-                            var locationName = string.Empty;
-                            long? locationId = 0;
+                    await e.Channel.SendMessageAsync(embed: builder);
+                }
+                if (e.Message.Content.StartsWith("!help"))
+                {
+                    var builder2 = new StringBuilder();
+                    builder2.AppendLine();
+                    builder2.AppendLine("\nVLCController (ofwel niels-bot) *v0.1*\n");
+                    builder2.AppendLine("Commands: ");
+                    builder2.AppendLine("**!skip** __*||*__ Skip to next item in the playlist");
+                    builder2.AppendLine("**!previous** __*||*__  Go to previous item in the playlist");
+                    builder2.AppendLine("**!pause** __*||*__  Pause playback");
+                    builder2.AppendLine("**!play** __*||*__ Start/resume playback");
+                    builder2.AppendLine("**!info** __*||*__ Show current playback information");
+                    builder2.AppendLine("**!help** __*||*__ Shows this overview");
+                    builder2.AppendLine("**!weather [location name]** __*||*__ Shows basic weather information for [location name]");
+                    builder2.AppendLine("\n\n");
 
-                            if (response.IsSuccessStatusCode)
-                            {
-                                var text = await response.Content.ReadAsStringAsync();
-                                var obj = JsonConvert.DeserializeObject<SearchItem[]>(text);
-
-                                stationId = obj?[0].StationId;
-
-                                locationName = obj?[0].Name;
-
-                                locationId = obj?[0].LocationId;
-                            }
-                            else
-                            {
-                                throw new Exception("**<!>** Could not find any weather stations close to given location");
-                            }
-
-                            response = await httpClient.GetAsync($"https://observations.buienradar.nl/1.0/actual/weatherstation/{stationId}");
-                            if (response.IsSuccessStatusCode)
-                            {
-                                var text = await response.Content.ReadAsStringAsync();
-                                var obj = JsonConvert.DeserializeObject<dynamic>(text);
-
-                                builder.AppendLine($"Observations for **{locationName}**");
-                                builder.AppendLine();
-                                builder.AppendLine("**Temperature (°C)**");
-                                builder.AppendLine($"Temperature: **{obj?.temperature}°**");
-                                builder.AppendLine($"Feeltemperature: **{obj?.feeltemperature}°**");
-                                builder.AppendLine($"Groundtemperature: **{obj?.groundtemperature}°**");
-                                builder.AppendLine();
-                                builder.AppendLine("**Wind**");
-                                builder.AppendLine($"Windspeed: **{obj?.windspeedBft} Bft**");
-                                builder.AppendLine($"Winddirection: **{obj?.winddirection}**");
-                                builder.AppendLine($"Wind gusts: **{obj?.windgusts} m/s**");
-                                builder.AppendLine();
-                                builder.AppendLine("**Other atmospheric properties**");
-                                builder.AppendLine($"Air pressure: **{obj?.airpressure} hPa**");
-                                builder.AppendLine($"Visibility: **{obj?.visibility} m**");
-                                builder.AppendLine($"Humidity: **{obj?.humidity}%**");
-                                builder.AppendLine();
-                                builder.AppendLine("**Rain statistics**");
-                                builder.AppendLine($"Precipitation: **{obj?.precipitation} mm**");
-                                builder.AppendLine($"Precipation: **{obj?.precipation} mm**");
-                                builder.AppendLine($"Rainfall last 24 hours: **{obj?.rainFallLast24Hour} mm**");
-                                builder.AppendLine($"Rainfall last hour: **{obj?.rainFallLastHour} mm**");
-                                builder.AppendLine();
-
-                                response = await httpClient.GetAsync($"https://forecast.buienradar.nl/2.0/forecast/{locationId}");
-                                text = await response.Content.ReadAsStringAsync();
-                                var forecast = JsonConvert.DeserializeObject<Forecast>(text);
-                                var day0 = forecast?.Items[0];
-
-                                builder.AppendLine("**Forecast per hour**");
-                                foreach (var hour in day0.Hours)
-                                {
-                                    builder.AppendLine($"**{FixInt(hour.DateTime.Hour)}:{FixInt(hour.DateTime.Minute)}** - **{GetWeatherText(hour.IconCode)}**");
-                                    builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from **{hour.WindDirection}**, Precipitation: **{hour.PrecipitationMm} mm**");
-                                    builder.AppendLine();
-                                }
-                                builder.AppendLine();
-
-                                builder.AppendLine("*Data provided by **Buienradar** *");
-
-                                var embedBuilder = new DiscordEmbedBuilder()
-                                {
-                                    Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail()
-                                    {
-                                        Url = $"https://cdn.buienradar.nl/resources/images/icons/weather/116x116/{obj?.iconcode}.png",
-                                        Height = 117,
-                                        Width = 117
-                                    },
-                                    Description = builder.ToString(),
-                                };
-
-                                await e.Channel.SendMessageAsync(embed: embedBuilder);
-                            }
-
-                            response.Dispose();
-                        }
-                    }
-                    if (e.Message.Content.StartsWith("!radar"))
+                    var embedBuilder = new DiscordEmbedBuilder()
                     {
-                        var builder = new DiscordEmbedBuilder()
-                        {
-                            ImageUrl = "https://cdn.knmi.nl/knmi/map/page/weer/actueel-weer/neerslagradar/WWWRADAR_loop.gif"
-                        };
+                        Description = builder2.ToString()
+                    };
 
-                        await e.Channel.SendMessageAsync(embed: builder);
-                    }
-                    if (e.Message.Content.StartsWith("!help"))
-                    {
-                        var builder2 = new StringBuilder();
-                        builder2.AppendLine();
-                        builder2.AppendLine("\nVLCController (ofwel niels-bot) *v0.1*\n");
-                        builder2.AppendLine("Commands: ");
-                        builder2.AppendLine("**!skip** __*||*__ Skip to next item in the playlist");
-                        builder2.AppendLine("**!previous** __*||*__  Go to previous item in the playlist");
-                        builder2.AppendLine("**!pause** __*||*__  Pause playback");
-                        builder2.AppendLine("**!play** __*||*__ Start/resume playback");
-                        builder2.AppendLine("**!info** __*||*__ Show current playback information");
-                        builder2.AppendLine("**!help** __*||*__ Shows this overview");
-                        builder2.AppendLine("**!weather [location name]** __*||*__ Shows basic weather information for [location name]");
-                        builder2.AppendLine("\n\n");
-
-                        var embedBuilder = new DiscordEmbedBuilder()
-                        {
-                            Description = builder2.ToString()
-                        };
-
-                        await e.Channel.SendMessageAsync(embedBuilder);
-                    }
+                    await e.Channel.SendMessageAsync(embedBuilder);
                 }
             }
         };
