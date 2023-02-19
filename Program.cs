@@ -616,651 +616,6 @@ internal class Program
         return value < 10 ? $"0{value}" : $"{value}";
     }
 
-    //private static async Task Main(string[] args)
-    //{
-    //    var clientConfig = new DiscordConfiguration()
-    //    {
-    //        Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.Guilds,
-    //        Token = "",
-    //        TokenType = TokenType.Bot,
-    //        AutoReconnect = true,
-    //        MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
-    //    };
-
-    //    var client = new DiscordClient(clientConfig);
-    //    using var httpClient = new HttpClient();
-    //    var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
-    //    httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
-
-    //    client.MessageCreated += async (s, e) =>
-    //    {
-    //        if (e.Message.Content.StartsWith('!'))
-    //        {
-    //            await e.Channel.TriggerTypingAsync();
-
-    //            string _baseUrl = "http://192.168.2.161:8080/status.json?command=";
-    //            string _baseUrl2 = "http://192.168.2.161:8080/status.json";
-    //            string _playListUrl = "http://192.168.2.161:8080/playlist.json";
-
-    //            var command = new Command(e.Message.Content.Split(' '));
-    //            var response = default(HttpResponseMessage);
-    //            var builder = new StringBuilder();
-    //            switch (command.Name)
-    //            {
-    //                case "!help":
-    //                    builder.Clear();
-    //                    builder.AppendLine();
-    //                    builder.AppendLine("\nVLCController (ofwel niels-bot) *v0.1*\n");
-    //                    builder.AppendLine("Commands: ");
-    //                    builder.AppendLine("**!skip** __*//*__ Skip to next item in the playlist");
-    //                    builder.AppendLine("**!previous** __*//*__  Go to previous item in the playlist");
-    //                    builder.AppendLine("**!pause** __*//*__  Pause playback");
-    //                    builder.AppendLine("**!play** __*//*__ Start/resume playback");
-    //                    builder.AppendLine("**!info** __*//*__ Show current playback information");
-    //                    builder.AppendLine("**!guide** __*//*__ Shows a time guide for the coming 7 media after current playing media.");
-    //                    builder.AppendLine("**!help** __*//*__ Shows this overview");
-    //                    builder.AppendLine("**!weather [location name]** __*//*__ Shows basic weather information for [location name]");
-    //                    //builder2.AppendLine("**!radar** __*//*__ Gets most recent radar image");
-    //                    //builder2.AppendLine("**!satellite** __*//*__ Get most recent satellite image");
-    //                    builder.AppendLine("\n\n");
-
-    //                    var embedBuilder = new DiscordEmbedBuilder()
-    //                    {
-    //                        Description = builder.ToString()
-    //                    };
-
-    //                    await e.Channel.SendMessageAsync(embedBuilder);
-    //                    break;
-
-    //                case "!skip":
-
-    //                    if (command.Parameters.Count > 0)
-    //                    {
-    //                        var id = command.Parameters[0];
-
-    //                        builder.Clear();
-    //                        response = await httpClient.GetAsync(_playListUrl);
-    //                        var content = await response.Content.ReadAsStringAsync();
-    //                        var playlist = JsonConvert.DeserializeObject<Playlist>(content);
-
-    //                        response = await httpClient.GetAsync(_baseUrl2);
-    //                        content = await response.Content.ReadAsStringAsync();
-    //                        var obj = JsonConvert.DeserializeObject<Status>(content);
-
-    //                        int index = 0;
-    //                        foreach (var item in playlist.Children[0].Children)
-    //                        {
-    //                            if (item.Name == obj.Information.Category.Meta.Filename)
-    //                            {
-    //                                response = await httpClient.GetAsync($"{_baseUrl}pl_next&id={item.Id}");
-    //                                content = await response.Content.ReadAsStringAsync();
-    //                                obj = JsonConvert.DeserializeObject<Status>(content);
-
-    //                                Group[] mediaInfo = ParseMediaInfo(obj.Information.Category.Meta.Filename);
-    //                                var name = mediaInfo
-    //                                   .FirstOrDefault(group =>
-    //                                   {
-    //                                       if (group.Name.Contains("ShowName") && group.Value != null)
-    //                                       {
-    //                                           return true;
-    //                                       }
-
-    //                                       return false;
-    //                                   });
-    //                                var year = mediaInfo
-    //                                .FirstOrDefault(group =>
-    //                                {
-    //                                    if (group.Name.Contains("ShowYear") && group.Value != null)
-    //                                        return true;
-
-    //                                    return false;
-    //                                });
-    //                                var season = mediaInfo
-    //                                .FirstOrDefault(group =>
-    //                                {
-    //                                    if (group.Name.Contains("Season") && group.Value != string.Empty)
-    //                                        return true;
-
-    //                                    return false;
-    //                                });
-    //                                var episode = mediaInfo
-    //                                .FirstOrDefault(group =>
-    //                                {
-    //                                    if (group.Name.Contains("Episode") && group.Value != string.Empty)
-    //                                    {
-    //                                        return true;
-    //                                    }
-
-    //                                    return false;
-    //                                });
-
-    //                                builder.AppendLine();
-    //                                builder.AppendLine($"{index}. {CleanShowName(name?.Value)}").Append(year?.Value != string.Empty ? $"(**{year?.Value}**)" : string.Empty);
-
-    //                                if (episode != null)
-    //                                    if (episode.Value != string.Empty)
-    //                                    {
-    //                                        builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
-    //                                    }
-
-    //                                var ts = obj.Position;
-    //                                var tsl = obj.Length;
-    //                                builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-
-    //                                var embedbuilder = new DiscordEmbedBuilder()
-    //                                {
-    //                                    Description = builder.ToString(),
-    //                                };
-
-    //                                await e.Channel.SendMessageAsync(embedbuilder);
-
-    //                                break;
-    //                            }
-
-    //                            index++;
-    //                        }
-
-    //                        response.Dispose();
-    //                        break;
-    //                    }
-    //                    else
-    //                    {
-    //                        response = await httpClient.GetAsync($"{_baseUrl}pl_next");
-
-    //                        if (response.IsSuccessStatusCode)
-    //                        {
-    //                            var content = await response.Content.ReadAsStringAsync();
-    //                            var obj = JsonConvert.DeserializeObject<Status>(content);
-    //                            builder.Clear();
-
-    //                            response = await httpClient.GetAsync(_playListUrl);
-    //                            content = await response.Content.ReadAsStringAsync();
-    //                            var playlist = JsonConvert.DeserializeObject<Playlist>(content);
-
-    //                            Group[] mediaInfo = ParseMediaInfo(obj.Information.Category.Meta.Filename);
-    //                            var name = mediaInfo
-    //                               .FirstOrDefault(group =>
-    //                               {
-    //                                   if (group.Name.Contains("ShowName") && group.Value != null)
-    //                                   {
-    //                                       return true;
-    //                                   }
-
-    //                                   return false;
-    //                               });
-    //                            var year = mediaInfo
-    //                            .FirstOrDefault(group =>
-    //                            {
-    //                                if (group.Name.Contains("ShowYear") && group.Value != null)
-    //                                    return true;
-
-    //                                return false;
-    //                            });
-    //                            var season = mediaInfo
-    //                            .FirstOrDefault(group =>
-    //                            {
-    //                                if (group.Name.Contains("Season") && group.Value != string.Empty)
-    //                                    return true;
-
-    //                                return false;
-    //                            });
-    //                            var episode = mediaInfo
-    //                            .FirstOrDefault(group =>
-    //                            {
-    //                                if (group.Name.Contains("Episode") && group.Value != string.Empty)
-    //                                {
-    //                                    return true;
-    //                                }
-
-    //                                return false;
-    //                            });
-
-    //                            int index = 0;
-    //                            foreach (var item in playlist.Children[0].Children)
-    //                            {
-    //                                if (item.Name == obj.Information.Category.Meta.Filename)
-    //                                {
-    //                                    break;
-    //                                }
-
-    //                                index++;
-    //                            }
-
-    //                            builder.AppendLine();
-    //                            builder.AppendLine($"{index}. {CleanShowName(name?.Value)}").Append(year?.Value != string.Empty ? $"(**{year?.Value}**)" : string.Empty);
-
-    //                            if (episode != null)
-    //                                if (episode.Value != string.Empty)
-    //                                {
-    //                                    builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
-    //                                }
-
-    //                            var ts = obj.Position;
-    //                            var tsl = obj.Length;
-    //                            builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-
-    //                            var embedbuilder = new DiscordEmbedBuilder()
-    //                            {
-    //                                Description = builder.ToString(),
-    //                            };
-
-    //                            await e.Channel.SendMessageAsync(embedbuilder);
-    //                        }
-    //                        response.Dispose();
-    //                    }
-
-    //                    break;
-
-    //                case "!previous":
-    //                    response = await httpClient.GetAsync($"{_baseUrl}pl_previous");
-
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        await e.Channel.SendMessageAsync("Previous item");
-    //                    }
-    //                    response.Dispose();
-    //                    break;
-
-    //                case "!pause":
-    //                    response = await httpClient.GetAsync($"{_baseUrl}pl_pause");
-
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        await e.Channel.SendMessageAsync("Paused");
-    //                    }
-    //                    response.Dispose();
-    //                    break;
-
-    //                case "!play":
-
-    //                    response = await httpClient.GetAsync($"{_baseUrl}pl_play");
-
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        var content = await response.Content.ReadAsStringAsync();
-    //                        var obj = JsonConvert.DeserializeObject<Status>(content);
-    //                        builder.Clear();
-
-    //                        response = await httpClient.GetAsync(_playListUrl);
-    //                        content = await response.Content.ReadAsStringAsync();
-    //                        var playlist = JsonConvert.DeserializeObject<Playlist>(content);
-
-    //                        Group[] mediaInfo = ParseMediaInfo(obj.Information.Category.Meta.Filename);
-    //                        var name = mediaInfo
-    //                           .FirstOrDefault(group =>
-    //                           {
-    //                               if (group.Name.Contains("ShowName") && group.Value != null)
-    //                               {
-    //                                   return true;
-    //                               }
-
-    //                               return false;
-    //                           });
-    //                        var year = mediaInfo
-    //                        .FirstOrDefault(group =>
-    //                        {
-    //                            if (group.Name.Contains("ShowYear") && group.Value != null)
-    //                                return true;
-
-    //                            return false;
-    //                        });
-    //                        var season = mediaInfo
-    //                        .FirstOrDefault(group =>
-    //                        {
-    //                            if (group.Name.Contains("Season") && group.Value != string.Empty)
-    //                                return true;
-
-    //                            return false;
-    //                        });
-    //                        var episode = mediaInfo
-    //                        .FirstOrDefault(group =>
-    //                        {
-    //                            if (group.Name.Contains("Episode") && group.Value != string.Empty)
-    //                            {
-    //                                return true;
-    //                            }
-
-    //                            return false;
-    //                        });
-
-    //                        int index = 0;
-    //                        foreach (var item in playlist.Children[0].Children)
-    //                        {
-    //                            if (item.Name == obj.Information.Category.Meta.Filename)
-    //                            {
-    //                                break;
-    //                            }
-
-    //                            index++;
-    //                        }
-
-    //                        builder.AppendLine();
-    //                        builder.AppendLine($"{index}. {CleanShowName(name?.Value)}").Append(year?.Value != string.Empty ? $"(**{year?.Value}**)" : string.Empty);
-
-    //                        if (episode != null)
-    //                            if (episode.Value != string.Empty)
-    //                            {
-    //                                builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
-    //                            }
-
-    //                        var ts = obj.Position;
-    //                        var tsl = obj.Length;
-    //                        builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-
-    //                        var embedbuilder = new DiscordEmbedBuilder()
-    //                        {
-    //                            Description = builder.ToString(),
-    //                        };
-
-    //                        await e.Channel.SendMessageAsync(embedbuilder);
-    //                    }
-    //                    response.Dispose();
-
-    //                    break;
-
-    //                case "!info":
-    //                    response = await httpClient.GetAsync(_baseUrl2);
-
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        var content = await response.Content.ReadAsStringAsync();
-    //                        var obj = JsonConvert.DeserializeObject<Status>(content);
-    //                        builder.Clear();
-
-    //                        response = await httpClient.GetAsync(_playListUrl);
-    //                        content = await response.Content.ReadAsStringAsync();
-    //                        var playlist = JsonConvert.DeserializeObject<Playlist>(content);
-
-    //                        Group[] mediaInfo = ParseMediaInfo(obj.Information.Category.Meta.Filename);
-    //                        var name = mediaInfo
-    //                           .FirstOrDefault(group =>
-    //                           {
-    //                               if (group.Name.Contains("ShowName") && group.Value != null)
-    //                               {
-    //                                   return true;
-    //                               }
-
-    //                               return false;
-    //                           });
-    //                        var year = mediaInfo
-    //                        .FirstOrDefault(group =>
-    //                        {
-    //                            if (group.Name.Contains("ShowYear") && group.Value != null)
-    //                                return true;
-
-    //                            return false;
-    //                        });
-    //                        var season = mediaInfo
-    //                        .FirstOrDefault(group =>
-    //                        {
-    //                            if (group.Name.Contains("Season") && group.Value != string.Empty)
-    //                                return true;
-
-    //                            return false;
-    //                        });
-    //                        var episode = mediaInfo
-    //                        .FirstOrDefault(group =>
-    //                        {
-    //                            if (group.Name.Contains("Episode") && group.Value != string.Empty)
-    //                            {
-    //                                return true;
-    //                            }
-
-    //                            return false;
-    //                        });
-
-    //                        int index = 0;
-    //                        foreach (var item in playlist.Children[0].Children)
-    //                        {
-    //                            if (item.Name == obj.Information.Category.Meta.Filename)
-    //                            {
-    //                                break;
-    //                            }
-
-    //                            index++;
-    //                        }
-
-    //                        builder.AppendLine();
-    //                        builder.AppendLine($"{index}. {CleanShowName(name?.Value)}").Append(year?.Value != string.Empty ? $"(**{year?.Value}**)" : string.Empty);
-
-    //                        if (episode != null)
-    //                            if (episode.Value != string.Empty)
-    //                            {
-    //                                builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
-    //                            }
-
-    //                        var ts = obj.Position;
-    //                        var tsl = obj.Length;
-    //                        builder.AppendLine($"{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}:{FixInt(ts.Seconds)} - {FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}:{FixInt(tsl.Seconds)}");
-
-    //                        var embedbuilder = new DiscordEmbedBuilder()
-    //                        {
-    //                            Description = builder.ToString(),
-    //                        };
-
-    //                        await e.Channel.SendMessageAsync(embedbuilder);
-    //                    }
-
-    //                    response.Dispose();
-    //                    break;
-
-    //                case "!guide":
-    //                    response = await httpClient.GetAsync(_playListUrl);
-
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        builder.Clear();
-    //                        builder.AppendLine();
-
-    //                        var content = response.Content;
-    //                        var text = await content.ReadAsStringAsync();
-    //                        var data = JsonConvert.DeserializeObject<Playlist>(text);
-
-    //                        response = await httpClient.GetAsync($"{_baseUrl}");
-    //                        content = response.Content;
-    //                        text = await content.ReadAsStringAsync();
-    //                        var info = JsonConvert.DeserializeObject<Status>(text);
-
-    //                        var curLeaf = new Leaf();
-    //                        int leafIndex = 0;
-
-    //                        await e.Channel.SendMessageAsync(info.Information.Category.Meta.Filename);
-
-    //                        for (int i = 0; i < data.Children[0].Children.Length; i++)
-    //                        {
-    //                            var leaf = data.Children[0].Children[i];
-
-    //                            if (HttpUtility.UrlDecode(leaf.Uri).Contains(info.Information.Category.Meta.Filename))
-    //                            {
-    //                                leafIndex = i;
-    //                                curLeaf = leaf;
-    //                                break;
-    //                            }
-    //                        }
-
-    //                        var name = info.Information.Category.Meta.Filename;
-    //                        var mediainfo = ParseMediaInfo(name);
-    //                        var title = mediainfo.FirstOrDefault(grp => grp.Name.Contains("ShowName") && grp.Value != string.Empty);
-    //                        var year = mediainfo.FirstOrDefault(grp => grp.Name.Contains("ShowYear") && grp.Value != string.Empty);
-    //                        var episode = mediainfo.FirstOrDefault(grp => grp.Name.Contains("Episode") && grp.Value != string.Empty);
-    //                        var season = mediainfo.FirstOrDefault(grp => grp.Name.Contains("Season") && grp.Value != string.Empty);
-    //                        var ts = DateTime.Now.TimeOfDay + info.TimeLeft;
-
-    //                        builder.AppendLine();
-    //                        builder.AppendLine($"**Now** - **{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}**");
-    //                        builder.Append($"{leafIndex}. {CleanShowName(title.Value)} ");
-
-    //                        if (year != null)
-    //                        {
-    //                            builder.AppendLine((year.Value != string.Empty) ? $"**({year.Value})**" : string.Empty);
-    //                        }
-    //                        else
-    //                        {
-    //                            builder.AppendLine();
-    //                        }
-
-    //                        if (episode != null)
-    //                            if (episode.Value != string.Empty)
-    //                            {
-    //                                builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
-    //                            }
-
-    //                        builder.AppendLine();
-
-    //                        int j = leafIndex;
-    //                        foreach (var leaf in data.Children[0].Children[(leafIndex + 1)..(leafIndex + 10)])
-    //                        {
-    //                            if (j == data.Children[0].Children.Length)
-    //                            {
-    //                                break;
-    //                            }
-
-    //                            if (leaf != null)
-    //                            {
-    //                                var tsl = ts + TimeSpan.FromSeconds(leaf.Duration);
-    //                                name = leaf.Name;
-    //                                mediainfo = ParseMediaInfo(name);
-
-    //                                title = mediainfo.FirstOrDefault(grp => grp.Name.Contains("ShowName") && grp.Value != string.Empty);
-    //                                year = mediainfo.FirstOrDefault(grp => grp.Name.Contains("ShowYear") && grp.Value != string.Empty);
-    //                                episode = mediainfo.FirstOrDefault(grp => grp.Name.Contains("Episode") && grp.Value != string.Empty);
-    //                                season = mediainfo.FirstOrDefault(grp => grp.Name.Contains("Season") && grp.Value != string.Empty);
-
-    //                                builder.AppendLine();
-    //                                builder.AppendLine($"**{FixInt(ts.Hours)}:{FixInt(ts.Minutes)}** - **{FixInt(tsl.Hours)}:{FixInt(tsl.Minutes)}**");
-    //                                builder.Append($"{j}. {CleanShowName(title.Value)} ");
-
-    //                                if (year != null)
-    //                                {
-    //                                    builder.AppendLine((year.Value != string.Empty) ? $"**({year.Value})**" : string.Empty);
-    //                                }
-    //                                else
-    //                                {
-    //                                    builder.AppendLine();
-    //                                }
-
-    //                                if (episode != null)
-    //                                    if (episode.Value != string.Empty)
-    //                                    {
-    //                                        builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
-    //                                    }
-
-    //                                builder.AppendLine();
-    //                                j++;
-    //                                ts = tsl;
-    //                            }
-    //                        }
-
-    //                        var embedbuilder = new DiscordEmbedBuilder()
-    //                        {
-    //                            Description = builder.ToString()
-    //                        };
-
-    //                        await e.Channel.SendMessageAsync(embedbuilder);
-    //                    }
-    //                    break;
-
-    //                case "!weather":
-    //                    var parts = command.Parameters[0];
-
-    //                    builder.Clear();
-    //                    response = await httpClient.GetAsync($"https://location.buienradar.nl/1.1/location/search?query={parts}");
-    //                    long? stationId = 0;
-    //                    var locationName = string.Empty;
-    //                    long? locationId = 0;
-
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        var text = await response.Content.ReadAsStringAsync();
-    //                        var obj = JsonConvert.DeserializeObject<SearchItem[]>(text);
-
-    //                        stationId = obj?[0].StationId;
-
-    //                        locationName = obj?[0].Name;
-
-    //                        locationId = obj?[0].LocationId;
-    //                    }
-    //                    else
-    //                    {
-    //                        throw new Exception("**<!>** Could not find any weather stations close to given location");
-    //                    }
-
-    //                    response = await httpClient.GetAsync($"https://observations.buienradar.nl/1.0/actual/weatherstation/{stationId}");
-    //                    if (response.IsSuccessStatusCode)
-    //                    {
-    //                        var text = await response.Content.ReadAsStringAsync();
-    //                        var obj = JsonConvert.DeserializeObject<dynamic>(text);
-
-    //                        response = await httpClient.GetAsync($"https://forecast.buienradar.nl/2.0/forecast/{locationId}");
-    //                        text = await response.Content.ReadAsStringAsync();
-    //                        var forecast = JsonConvert.DeserializeObject<Forecast>(text);
-    //                        var day0 = forecast?.Items[0];
-
-    //                        builder.AppendLine($"Observations for **{locationName}**");
-    //                        builder.AppendLine();
-    //                        builder.AppendLine($"Sunrise: **{FixInt(day0.Sunrise.Hour)}:{FixInt(day0.Sunrise.Minute)}** __*//*__ Sunset: **{FixInt(day0.Sunset.Hour)}:{FixInt(day0.Sunset.Minute)}**");
-    //                        builder.AppendLine();
-    //                        builder.AppendLine("**Temperature (°C)**");
-    //                        builder.AppendLine($"Temperature: **{obj?.temperature}°**");
-    //                        builder.AppendLine($"Feel temperature: **{obj?.feeltemperature}°**");
-    //                        builder.AppendLine($"Ground temperature: **{obj?.groundtemperature}°**");
-    //                        builder.AppendLine();
-    //                        builder.AppendLine("**Wind**");
-    //                        builder.AppendLine($"Wind speed: **{obj?.windspeedBft} Bft**");
-    //                        builder.AppendLine($"Wind direction: **{obj?.winddirection}**");
-    //                        builder.AppendLine($"Wind gusts: **{obj?.windgusts} m/s**");
-    //                        builder.AppendLine();
-    //                        builder.AppendLine("**Other atmospheric properties**");
-    //                        builder.AppendLine($"Air pressure: **{obj?.airpressure} hPa**");
-    //                        builder.AppendLine($"Visibility: **{obj?.visibility} m**");
-    //                        builder.AppendLine($"Humidity: **{obj?.humidity}%**");
-    //                        builder.AppendLine();
-    //                        builder.AppendLine("**Rain statistics**");
-    //                        builder.AppendLine($"Precipitation: **{obj?.precipitation} mm**");
-    //                        builder.AppendLine($"Precipation: **{obj?.precipation} mm**");
-    //                        builder.AppendLine($"Rainfall last 24 hours: **{obj?.rainFallLast24Hour} mm**");
-    //                        builder.AppendLine($"Rainfall last hour: **{obj?.rainFallLastHour} mm**");
-    //                        builder.AppendLine();
-    //                        builder.AppendLine("**Forecast per hour**");
-    //                        foreach (var hour in day0.Hours)
-    //                        {
-    //                            builder.AppendLine($"**{FixInt(hour.DateTime.Hour)}:{FixInt(hour.DateTime.Minute)}** - **{GetWeatherText(hour.IconCode)}** - Cloud cover: **{hour.CloudCover}%**");
-    //                            builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from the **{hour.WindDirection}**, Precipitation: **{hour.PrecipitationMm} mm**");
-    //                            builder.AppendLine();
-    //                        }
-    //                        builder.AppendLine();
-
-    //                        builder.AppendLine("*Data provided by **Buienradar** *");
-
-    //                        embedBuilder = new DiscordEmbedBuilder()
-    //                        {
-    //                            Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail()
-    //                            {
-    //                                Url = $"https://cdn.buienradar.nl/resources/images/icons/weather/116x116/{obj?.iconcode}.png",
-    //                                Height = 117,
-    //                                Width = 117
-    //                            },
-    //                            Description = builder.ToString(),
-    //                        };
-
-    //                        await e.Channel.SendMessageAsync(embed: embedBuilder);
-    //                    }
-
-    //                    response.Dispose();
-
-    //                    break;
-    //            }
-    //        }
-    //    };
-
-    //    await client.ConnectAsync();
-
-    //    await Task.Delay(-1);
-
-    //    client.Dispose();
-    //    httpClient.Dispose();
-    //}
-
     public static string GetFileName(string uri)
     {
         return HttpUtility.UrlDecode(uri.Substring(uri.LastIndexOf('/'), uri.Length - uri.LastIndexOf("/")));
@@ -1454,3 +809,96 @@ public partial class Meta
     [JsonProperty("seasonNumber", NullValueHandling = NullValueHandling.Ignore)]
     public string SeasonNumber { get; set; }
 }
+
+//                case "!weather":
+//                    var parts = command.Parameters[0];
+
+//                    builder.Clear();
+//                    response = await httpClient.GetAsync($"https://location.buienradar.nl/1.1/location/search?query={parts}");
+//                    long? stationId = 0;
+//                    var locationName = string.Empty;
+//                    long? locationId = 0;
+
+//                    if (response.IsSuccessStatusCode)
+//                    {
+//                        var text = await response.Content.ReadAsStringAsync();
+//                        var obj = JsonConvert.DeserializeObject<SearchItem[]>(text);
+
+//                        stationId = obj?[0].StationId;
+
+//                        locationName = obj?[0].Name;
+
+//                        locationId = obj?[0].LocationId;
+//                    }
+//                    else
+//                    {
+//                        throw new Exception("**<!>** Could not find any weather stations close to given location");
+//                    }
+
+//                    response = await httpClient.GetAsync($"https://observations.buienradar.nl/1.0/actual/weatherstation/{stationId}");
+//                    if (response.IsSuccessStatusCode)
+//                    {
+//                        var text = await response.Content.ReadAsStringAsync();
+//                        var obj = JsonConvert.DeserializeObject<dynamic>(text);
+
+//                        response = await httpClient.GetAsync($"https://forecast.buienradar.nl/2.0/forecast/{locationId}");
+//                        text = await response.Content.ReadAsStringAsync();
+//                        var forecast = JsonConvert.DeserializeObject<Forecast>(text);
+//                        var day0 = forecast?.Items[0];
+
+//                        builder.AppendLine($"Observations for **{locationName}**");
+//                        builder.AppendLine();
+//                        builder.AppendLine($"Sunrise: **{FixInt(day0.Sunrise.Hour)}:{FixInt(day0.Sunrise.Minute)}** __*//*__ Sunset: **{FixInt(day0.Sunset.Hour)}:{FixInt(day0.Sunset.Minute)}**");
+//                        builder.AppendLine();
+//                        builder.AppendLine("**Temperature (°C)**");
+//                        builder.AppendLine($"Temperature: **{obj?.temperature}°**");
+//                        builder.AppendLine($"Feel temperature: **{obj?.feeltemperature}°**");
+//                        builder.AppendLine($"Ground temperature: **{obj?.groundtemperature}°**");
+//                        builder.AppendLine();
+//                        builder.AppendLine("**Wind**");
+//                        builder.AppendLine($"Wind speed: **{obj?.windspeedBft} Bft**");
+//                        builder.AppendLine($"Wind direction: **{obj?.winddirection}**");
+//                        builder.AppendLine($"Wind gusts: **{obj?.windgusts} m/s**");
+//                        builder.AppendLine();
+//                        builder.AppendLine("**Other atmospheric properties**");
+//                        builder.AppendLine($"Air pressure: **{obj?.airpressure} hPa**");
+//                        builder.AppendLine($"Visibility: **{obj?.visibility} m**");
+//                        builder.AppendLine($"Humidity: **{obj?.humidity}%**");
+//                        builder.AppendLine();
+//                        builder.AppendLine("**Rain statistics**");
+//                        builder.AppendLine($"Precipitation: **{obj?.precipitation} mm**");
+//                        builder.AppendLine($"Precipation: **{obj?.precipation} mm**");
+//                        builder.AppendLine($"Rainfall last 24 hours: **{obj?.rainFallLast24Hour} mm**");
+//                        builder.AppendLine($"Rainfall last hour: **{obj?.rainFallLastHour} mm**");
+//                        builder.AppendLine();
+//                        builder.AppendLine("**Forecast per hour**");
+//                        foreach (var hour in day0.Hours)
+//                        {
+//                            builder.AppendLine($"**{FixInt(hour.DateTime.Hour)}:{FixInt(hour.DateTime.Minute)}** - **{GetWeatherText(hour.IconCode)}** - Cloud cover: **{hour.CloudCover}%**");
+//                            builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from the **{hour.WindDirection}**, Precipitation: **{hour.PrecipitationMm} mm**");
+//                            builder.AppendLine();
+//                        }
+//                        builder.AppendLine();
+
+//                        builder.AppendLine("*Data provided by **Buienradar** *");
+
+//                        embedBuilder = new DiscordEmbedBuilder()
+//                        {
+//                            Thumbnail = new DiscordEmbedBuilder.EmbedThumbnail()
+//                            {
+//                                Url = $"https://cdn.buienradar.nl/resources/images/icons/weather/116x116/{obj?.iconcode}.png",
+//                                Height = 117,
+//                                Width = 117
+//                            },
+//                            Description = builder.ToString(),
+//                        };
+
+//                        await e.Channel.SendMessageAsync(embed: embedBuilder);
+//                    }
+
+//                    response.Dispose();
+
+//                    break;
+//            }
+//        }
+//    };
