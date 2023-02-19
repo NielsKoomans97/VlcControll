@@ -37,7 +37,7 @@ internal class Program
         {
             var internalMessage = message.Message;
             var content = internalMessage.Content;
-            var embed = default(DiscordEmbedBuilder);
+            var embed = new DiscordEmbedBuilder();
 
             //await GetStatusAsync();
             //await GetGuideAsync();
@@ -71,6 +71,8 @@ internal class Program
                                 }
 
                                 SearchResult = results.FirstOrDefault();
+
+                                embed = new DiscordEmbedBuilder();
                                 embed = await GetWeatherAsync();
 
                                 await internalMessage.Channel.SendMessageAsync(embed);
@@ -105,32 +107,38 @@ internal class Program
                             }
                             else
                             {
+                                embed = new DiscordEmbedBuilder();
                                 embed = await SkipAsync();
                                 await internalMessage.Channel.SendMessageAsync(embed);
                             }
                         break;
 
                     case "!play":
+                        embed = new DiscordEmbedBuilder();
                         embed = await PlayAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!pause":
+                        embed = new DiscordEmbedBuilder();
                         embed = await PauseAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!status":
+                        embed = new DiscordEmbedBuilder();
                         embed = await GetStatusAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!guide":
+                        embed = new DiscordEmbedBuilder();
                         embed = await GetGuideAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!help":
+                        embed = new DiscordEmbedBuilder();
                         embed = GetHelp();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
@@ -264,7 +272,8 @@ internal class Program
 
     public static async Task<DiscordEmbedBuilder> GetStatusAsync()
     {
-        Status = await GetAsync<Status>($"{statusUrl}");
+        Status = null;
+        Status = await GetAsync<Status>(statusUrl);
 
         var embedBuilder = new DiscordEmbedBuilder()
         {
@@ -276,6 +285,7 @@ internal class Program
 
     public static async Task<DiscordEmbedBuilder> GetGuideAsync()
     {
+        Playlist = null;
         var items = await GetAsync<Item>(playlistUrl);
         Playlist = new Playlist(items.Children);
 
@@ -848,7 +858,7 @@ public partial class Status
     [JsonProperty("length", NullValueHandling = NullValueHandling.Ignore)]
     public long Length { get; set; }
 
-    [JsonProperty("position", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonProperty("time", NullValueHandling = NullValueHandling.Ignore)]
     public long Position { get; set; }
 
     [JsonProperty("information", NullValueHandling = NullValueHandling.Ignore)]
