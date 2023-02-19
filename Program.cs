@@ -15,21 +15,106 @@ using System.Text.RegularExpressions;
 
 internal class Program
 {
-    private static string FixInt(int value)
+    public static Playlist Playlist;
+    public static Status Status;
+
+    private static HttpClient httpClient;
+    private static DiscordClient discordClient;
+
+    private static string statusUrl = "http://192.168.2.161:8080/status.json";
+    private static string playlistUrl = "http://192.168.2.161:8080/playlist.json";
+
+    public static async Task Main(string[] args)
     {
-        return value < 10 ? $"0{value}" : $"{value}";
-    }
+        httpClient = new HttpClient();
+        discordClient = new DiscordClient(StandardConfig);
+
+        var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
+        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+
+        await LoadStatusAsync();
+        await LoadPlaylistAsync();
+
+        discordClient.MessageCreated += async (sender, message) =>
+        {
+            var internalMessage = message.Message;
+            var content = internalMessage.Content;
+            var embed = default(DiscordEmbedBuilder);
+
+            //await GetStatusAsync();
+            //await GetGuideAsync();
+
+            if (content.StartsWith('!'))
+            {
+                await message.Channel.TriggerTypingAsync();
+
+                var parts = ExtractCommand(content);
+
+                switch (parts[1].Value)
+                {
+                    case "!skip":
+                        //Console.WriteLine(parts.Length);
+
+                        //foreach (Group part in parts)
+                        //    Console.WriteLine($"{part.Index} {part.Value}");
+
+                        if (parts.Length > 2)
+                            if (parts[3].Value != string.Empty)
+                            {
+                                Console.WriteLine(parts[3].Value);
+
+                                var index = Convert.ToInt32(parts[3].Value);
+                                var item = Playlist.Items.FirstOrDefault(item => item.Value.Id == index);
+
+                                Console.WriteLine(item.Value.Id);
+
+                                if (item.Value != null)
+                                {
+                                    embed = await SkipAsync(item.Value);
+                                    await internalMessage.Channel.SendMessageAsync(embed);
+                                }
+                                else
+                                {
+                                    await internalMessage.Channel.SendMessageAsync("No item was found with the given ID");
+                                }
+                            }
+                            else
+                            {
+                                embed = await SkipAsync();
+                                await internalMessage.Channel.SendMessageAsync(embed);
+                            }
+                        break;
 
     private static async Task Main(string[] args)
     {
         var clientConfig = new DiscordConfiguration()
         {
-            Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.Guilds,
-            Token = "MTA2MzEyMTk2NDA0ODMyMjU5Mg.G7txjC.1TtpnqneHypYO0gXC5f6E9nlYKHErKwDCq8BAI",
-            TokenType = TokenType.Bot,
-            AutoReconnect = true,
-            MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
-        };
+            var mts = regex.Matches(content);
+            foreach (Match match in mts)
+            {
+                foreach (Group group in match.Groups)
+                {
+                    if (!groupList.Contains(group))
+                    {
+                        groupList.Add(group);
+                    }
+                }
+            }
+
+            return groupList.ToArray();
+        }
+
+        throw new Exception("Couldn't extract parts from command");
+    }
+
+    private static DiscordConfiguration StandardConfig => new DiscordConfiguration()
+    {
+        Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.Guilds,
+        Token = "MTA2MzEyMTk2NDA0ODMyMjU5Mg.G7txjC.1TtpnqneHypYO0gXC5f6E9nlYKHErKwDCq8BAI",
+        TokenType = TokenType.Bot,
+        AutoReconnect = true,
+        MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
+    };
 
         var client = new DiscordClient(clientConfig);
         using var httpClient = new HttpClient();
