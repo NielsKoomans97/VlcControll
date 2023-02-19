@@ -352,7 +352,7 @@ internal class Program
             var now = DateTime.Now.TimeOfDay;
             var left = now + (len - pos);
 
-            builder.AppendLine($"**{FixInt(now.Hours)}:{FixInt(now.Minutes)}** - **{FixInt(left.Hours)}:{FixInt(left.Minutes)}**");
+            builder.AppendLine($"**Now** - **{FixInt(left.Hours)}:{FixInt(left.Minutes)}**");
 
             if (name != null)
             {
@@ -383,6 +383,8 @@ internal class Program
                 if (episode.Value != string.Empty)
                     builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
             }
+
+            builder.AppendLine($"{FixInt(pos.Hours)}:{FixInt(pos.Minutes)}:{FixInt(pos.Seconds)} - {FixInt(len.Hours)}:{FixInt(len.Minutes)}:{FixInt(len.Seconds)}");
 
             return builder.ToString();
         }
@@ -447,7 +449,7 @@ internal class Program
             var now = DateTime.Now.TimeOfDay;
             var left = now + (len - pos);
 
-            builder.AppendLine($"**{FixInt(now.Hours)}:{FixInt(now.Minutes)}** - **{FixInt(left.Hours)}:{FixInt(left.Minutes)}**");
+            builder.AppendLine($"**Now** - **{FixInt(left.Hours)}:{FixInt(left.Minutes)}**");
 
             if (name != null)
             {
@@ -478,6 +480,8 @@ internal class Program
                 if (episode.Value != string.Empty)
                     builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
             }
+
+            builder.AppendLine($"{FixInt(pos.Hours)}:{FixInt(pos.Minutes)}:{FixInt(pos.Seconds)} - {FixInt(len.Hours)}:{FixInt(len.Minutes)}:{FixInt(len.Seconds)}");
 
             builder.AppendLine();
 
