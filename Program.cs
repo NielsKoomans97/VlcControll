@@ -16,8 +16,11 @@ internal class Program
     private static string statusUrl = "http://192.168.2.161:8080/status.json";
     private static string playlistUrl = "http://192.168.2.161:8080/playlist.json";
 
+    private static string DiscordToken = string.Empty;
+
     public static async Task Main(string[] args)
     {
+        DiscordToken = await File.ReadAllTextAsync($"{AppDomain.CurrentDomain.BaseDirectory}\\token");
         httpClient = new HttpClient();
         discordClient = new DiscordClient(StandardConfig);
 
@@ -138,7 +141,7 @@ internal class Program
     private static DiscordConfiguration StandardConfig => new DiscordConfiguration()
     {
         Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.Guilds,
-        Token = "MTA2MzEyMTk2NDA0ODMyMjU5Mg.G7txjC.1TtpnqneHypYO0gXC5f6E9nlYKHErKwDCq8BAI",
+        Token = DiscordToken,
         TokenType = TokenType.Bot,
         AutoReconnect = true,
         MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
