@@ -617,7 +617,7 @@ internal class Program
     //    var clientConfig = new DiscordConfiguration()
     //    {
     //        Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.Guilds,
-    //        Token = "MTA2MzEyMTk2NDA0ODMyMjU5Mg.G7txjC.1TtpnqneHypYO0gXC5f6E9nlYKHErKwDCq8BAI",
+    //        Token = "",
     //        TokenType = TokenType.Bot,
     //        AutoReconnect = true,
     //        MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
