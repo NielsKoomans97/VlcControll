@@ -9,6 +9,9 @@ internal class Program
 {
     public static Playlist? Playlist;
     public static Status? Status;
+    public static Observation? Observation;
+    public static Forecast? Forecast;
+    public static SearchResult? SearchResult;
 
     private static HttpClient? httpClient;
     private static DiscordClient? discordClient;
@@ -47,6 +50,33 @@ internal class Program
 
                 switch (parts[1].Value)
                 {
+                    case "!weather":
+                        Console.WriteLine(parts.Length);
+
+                        foreach (Group part in parts)
+                            Console.WriteLine($"{part.Index} {part.Value}");
+
+                        if (parts.Length > 2)
+                            if (parts[3].Value != string.Empty)
+                            {
+                                var query = parts[3].Value;
+                                var results = await GetAsync<SearchResult[]>($"https://location.buienradar.nl/1.1/location/search?query={query}");
+
+                                foreach (SearchResult result in results)
+                                    Console.WriteLine($"{result.Name} {result.Weatherstationid}");
+
+                                if (!results.Any())
+                                {
+                                    await internalMessage.Channel.SendMessageAsync("No location was found from the given query");
+                                }
+
+                                SearchResult = results.FirstOrDefault();
+                                embed = await GetWeatherAsync();
+
+                                await internalMessage.Channel.SendMessageAsync(embed);
+                            }
+                        break;
+
                     case "!skip":
                         //Console.WriteLine(parts.Length);
 
@@ -149,22 +179,14 @@ internal class Program
 
     public static async Task<T> GetAsync<T>(string requestUri)
     {
-        try
+        using (var response = await httpClient.GetAsync(requestUri))
+        using (var content = response.EnsureSuccessStatusCode().Content)
+        using (var streamReader = new StreamReader(await content.ReadAsStreamAsync()))
+        using (var jsonTextReader = new JsonTextReader(streamReader))
         {
-            using (var response = await httpClient.GetAsync(requestUri))
-            using (var content = response.EnsureSuccessStatusCode().Content)
-            using (var streamReader = new StreamReader(await content.ReadAsStreamAsync()))
-            using (var jsonTextReader = new JsonTextReader(streamReader))
-            {
-                var js = new JsonSerializer();
-                return js.Deserialize<T>(jsonTextReader)
-                    ?? throw new Exception(nameof(requestUri));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            return default(T);
+            var js = new JsonSerializer();
+            return js.Deserialize<T>(jsonTextReader)
+                ?? throw new Exception(nameof(requestUri));
         }
     }
 
@@ -260,6 +282,22 @@ internal class Program
         var embedBuilder = new DiscordEmbedBuilder()
         {
             Description = WriteGuide()
+        };
+
+        return embedBuilder;
+    }
+
+    public static async Task<DiscordEmbedBuilder> GetWeatherAsync()
+    {
+        Console.WriteLine($"https://observations.buienradar.nl/1.0/actual/weatherstation/{SearchResult?.Weatherstationid}");
+        Console.WriteLine($"https://forecast.buienradar.nl/2.0/forecast/{SearchResult?.Id}");
+
+        Observation = await GetAsync<Observation>($"https://observations.buienradar.nl/1.0/actual/weatherstation/{SearchResult?.Weatherstationid}");
+        Forecast = await GetAsync<Forecast>($"https://forecast.buienradar.nl/2.0/forecast/{SearchResult?.Id}");
+
+        var embedBuilder = new DiscordEmbedBuilder()
+        {
+            Description = WriteWeather()
         };
 
         return embedBuilder;
@@ -579,6 +617,52 @@ internal class Program
         }
 
         builder.AppendLine("** No information **");
+        return builder.ToString();
+    }
+
+    private static string WriteWeather()
+    {
+        var day0 = Forecast?.Days[0];
+
+        var builder = new StringBuilder();
+        builder.AppendLine();
+
+        builder.AppendLine($"Observations for **{SearchResult?.Name}**");
+        builder.AppendLine();
+        builder.AppendLine($"Sunrise: **{day0?.Sunrise}** __*//*__ Sunset: **{day0?.Sunset}**");
+        builder.AppendLine();
+        builder.AppendLine("**Temperature (°C)**");
+        builder.AppendLine($"Temperature: **{Observation?.Temperature}°**");
+        builder.AppendLine($"Feel temperature: **{Observation?.Feeltemperature}°**");
+        builder.AppendLine($"Ground temperature: **{Observation?.Groundtemperature}°**");
+        builder.AppendLine();
+        builder.AppendLine("**Wind**");
+        builder.AppendLine($"Wind speed: **{Observation?.WindspeedBft} Bft**");
+        builder.AppendLine($"Wind direction: **{Observation?.Winddirection}**");
+        builder.AppendLine($"Wind gusts: **{Observation?.Windgusts} m/s**");
+        builder.AppendLine();
+        builder.AppendLine("**Other atmospheric properties**");
+        builder.AppendLine($"Air pressure: **{Observation?.Airpressure} hPa**");
+        builder.AppendLine($"Visibility: **{Observation?.Visibility} m**");
+        builder.AppendLine($"Humidity: **{Observation?.Humidity}%**");
+        builder.AppendLine();
+        builder.AppendLine("**Rain statistics**");
+        builder.AppendLine($"Precipitation: **{Observation?.Precipitation} mm**");
+        builder.AppendLine($"Precipation: **{Observation?.Precipation} mm**");
+        builder.AppendLine($"Rainfall last 24 hours: **{Observation?.RainFallLast24Hour} mm**");
+        builder.AppendLine($"Rainfall last hour: **{Observation?.RainFallLastHour} mm**");
+        builder.AppendLine();
+        builder.AppendLine("**Forecast per hour**");
+        foreach (Hour hour in day0?.Hours)
+        {
+            builder.AppendLine($"**{hour.Datetime}** - **{GetWeatherText(hour.Iconcode)}** - Cloud cover: **{hour.Cloudcover}%**");
+            builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from the **{hour.Winddirection}**, Precipitation: **{hour.Precipitationmm} mm**");
+            builder.AppendLine();
+        }
+        builder.AppendLine();
+
+        builder.AppendLine("*Data provided by **Buienradar** *");
+
         return builder.ToString();
     }
 
@@ -902,3 +986,531 @@ public partial class Meta
 //            }
 //        }
 //    };
+
+public partial class Observation
+{
+    [JsonProperty("stationid", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Stationid { get; set; }
+
+    [JsonProperty("stationname", NullValueHandling = NullValueHandling.Ignore)]
+    public string Stationname { get; set; }
+
+    [JsonProperty("lat", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Lat { get; set; }
+
+    [JsonProperty("lon", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Lon { get; set; }
+
+    [JsonProperty("regio", NullValueHandling = NullValueHandling.Ignore)]
+    public string Regio { get; set; }
+
+    [JsonProperty("timestamp", NullValueHandling = NullValueHandling.Ignore)]
+    public string Timestamp { get; set; }
+
+    [JsonProperty("iconcode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Iconcode { get; set; }
+
+    [JsonProperty("winddirection", NullValueHandling = NullValueHandling.Ignore)]
+    public string Winddirection { get; set; }
+
+    [JsonProperty("airpressure", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Airpressure { get; set; }
+
+    [JsonProperty("temperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Temperature { get; set; }
+
+    [JsonProperty("groundtemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Groundtemperature { get; set; }
+
+    [JsonProperty("feeltemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Feeltemperature { get; set; }
+
+    [JsonProperty("visibility", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Visibility { get; set; }
+
+    [JsonProperty("windgusts", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Windgusts { get; set; }
+
+    [JsonProperty("windspeed", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Windspeed { get; set; }
+
+    [JsonProperty("windspeedBft", NullValueHandling = NullValueHandling.Ignore)]
+    public long? WindspeedBft { get; set; }
+
+    [JsonProperty("humidity", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Humidity { get; set; }
+
+    [JsonProperty("precipitation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitation { get; set; }
+
+    [JsonProperty("precipation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipation { get; set; }
+
+    [JsonProperty("precipitationmm", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitationmm { get; set; }
+
+    [JsonProperty("rainFallLast24Hour", NullValueHandling = NullValueHandling.Ignore)]
+    public long? RainFallLast24Hour { get; set; }
+
+    [JsonProperty("rainFallLastHour", NullValueHandling = NullValueHandling.Ignore)]
+    public long? RainFallLastHour { get; set; }
+
+    [JsonProperty("winddirectiondegrees", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Winddirectiondegrees { get; set; }
+}
+
+public partial class Forecast
+{
+    [JsonProperty("location", NullValueHandling = NullValueHandling.Ignore)]
+    public Location Location { get; set; }
+
+    [JsonProperty("timeOffset", NullValueHandling = NullValueHandling.Ignore)]
+    public long? TimeOffset { get; set; }
+
+    [JsonProperty("timestamp", NullValueHandling = NullValueHandling.Ignore)]
+    public string Timestamp { get; set; }
+
+    [JsonProperty("altitude", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Altitude { get; set; }
+
+    [JsonProperty("elevation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Elevation { get; set; }
+
+    [JsonProperty("machinename", NullValueHandling = NullValueHandling.Ignore)]
+    public string Machinename { get; set; }
+
+    [JsonProperty("elapsedms", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Elapsedms { get; set; }
+
+    [JsonProperty("pollenindexNowDay", NullValueHandling = NullValueHandling.Ignore)]
+    public long? PollenindexNowDay { get; set; }
+
+    [JsonProperty("pollenindexNowHour", NullValueHandling = NullValueHandling.Ignore)]
+    public long? PollenindexNowHour { get; set; }
+
+    [JsonProperty("nowrelevant", NullValueHandling = NullValueHandling.Ignore)]
+    public Nowrelevant Nowrelevant { get; set; }
+
+    [JsonProperty("days", NullValueHandling = NullValueHandling.Ignore)]
+    public Day[] Days { get; set; }
+}
+
+public partial class Day
+{
+    [JsonProperty("date", NullValueHandling = NullValueHandling.Ignore)]
+    public string Date { get; set; }
+
+    [JsonProperty("sunrise", NullValueHandling = NullValueHandling.Ignore)]
+    public string Sunrise { get; set; }
+
+    [JsonProperty("sunset", NullValueHandling = NullValueHandling.Ignore)]
+    public string Sunset { get; set; }
+
+    [JsonProperty("afternoon", NullValueHandling = NullValueHandling.Ignore)]
+    public Afternoon Afternoon { get; set; }
+
+    [JsonProperty("evening", NullValueHandling = NullValueHandling.Ignore)]
+    public Evening Evening { get; set; }
+
+    [JsonProperty("hours", NullValueHandling = NullValueHandling.Ignore)]
+    public Hour[] Hours { get; set; }
+
+    [JsonProperty("datetime", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetime { get; set; }
+
+    [JsonProperty("datetimeutc", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetimeutc { get; set; }
+
+    [JsonProperty("timetype", NullValueHandling = NullValueHandling.Ignore)]
+    public string Timetype { get; set; }
+
+    [JsonProperty("precipitationmm", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Precipitationmm { get; set; }
+
+    [JsonProperty("mintemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Mintemperature { get; set; }
+
+    [JsonProperty("maxtemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Maxtemperature { get; set; }
+
+    [JsonProperty("cloudcover", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Cloudcover { get; set; }
+
+    [JsonProperty("iconcode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Iconcode { get; set; }
+
+    [JsonProperty("iconid", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Iconid { get; set; }
+
+    [JsonProperty("sources", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sources { get; set; }
+
+    [JsonProperty("winddirection", NullValueHandling = NullValueHandling.Ignore)]
+    public string Winddirection { get; set; }
+
+    [JsonProperty("winddirectiondegrees", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Winddirectiondegrees { get; set; }
+
+    [JsonProperty("windspeedms", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Windspeedms { get; set; }
+
+    [JsonProperty("visibility", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Visibility { get; set; }
+
+    [JsonProperty("precipitation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitation { get; set; }
+
+    [JsonProperty("beaufort", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Beaufort { get; set; }
+
+    [JsonProperty("humidity", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Humidity { get; set; }
+
+    [JsonProperty("sunshine", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshine { get; set; }
+
+    [JsonProperty("uvindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Uvindex { get; set; }
+
+    [JsonProperty("bbqindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Bbqindex { get; set; }
+
+    [JsonProperty("mosquitoindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Mosquitoindex { get; set; }
+
+    [JsonProperty("pollenindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Pollenindex { get; set; }
+
+    [JsonProperty("airqualityindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Airqualityindex { get; set; }
+
+    [JsonProperty("mintemp", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Mintemp { get; set; }
+
+    [JsonProperty("maxtemp", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Maxtemp { get; set; }
+
+    [JsonProperty("windspeed", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Windspeed { get; set; }
+
+    [JsonProperty("sunshinepower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshinepower { get; set; }
+
+    [JsonProperty("sunpower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunpower { get; set; }
+
+    [JsonProperty("morning", NullValueHandling = NullValueHandling.Ignore)]
+    public Afternoon Morning { get; set; }
+
+    [JsonProperty("night", NullValueHandling = NullValueHandling.Ignore)]
+    public Afternoon Night { get; set; }
+
+    [JsonProperty("icescrapeindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Icescrapeindex { get; set; }
+}
+
+public partial class Afternoon
+{
+    [JsonProperty("datetime", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetime { get; set; }
+
+    [JsonProperty("datetimeutc", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetimeutc { get; set; }
+
+    [JsonProperty("timetype", NullValueHandling = NullValueHandling.Ignore)]
+    public string Timetype { get; set; }
+
+    [JsonProperty("precipitationmm", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Precipitationmm { get; set; }
+
+    [JsonProperty("mintemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Mintemperature { get; set; }
+
+    [JsonProperty("maxtemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Maxtemperature { get; set; }
+
+    [JsonProperty("cloudcover", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Cloudcover { get; set; }
+
+    [JsonProperty("iconcode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Iconcode { get; set; }
+
+    [JsonProperty("iconid", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Iconid { get; set; }
+
+    [JsonProperty("sources", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sources { get; set; }
+
+    [JsonProperty("winddirection", NullValueHandling = NullValueHandling.Ignore)]
+    public string Winddirection { get; set; }
+
+    [JsonProperty("winddirectiondegrees", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Winddirectiondegrees { get; set; }
+
+    [JsonProperty("windspeedms", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Windspeedms { get; set; }
+
+    [JsonProperty("visibility", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Visibility { get; set; }
+
+    [JsonProperty("precipitation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitation { get; set; }
+
+    [JsonProperty("beaufort", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Beaufort { get; set; }
+
+    [JsonProperty("humidity", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Humidity { get; set; }
+
+    [JsonProperty("sunshine", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshine { get; set; }
+
+    [JsonProperty("hour", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Hour { get; set; }
+
+    [JsonProperty("mintemp", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Mintemp { get; set; }
+
+    [JsonProperty("maxtemp", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Maxtemp { get; set; }
+
+    [JsonProperty("windspeed", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Windspeed { get; set; }
+
+    [JsonProperty("sunshinepower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshinepower { get; set; }
+
+    [JsonProperty("sunpower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunpower { get; set; }
+}
+
+public partial class Evening
+{
+    [JsonProperty("datetime", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetime { get; set; }
+
+    [JsonProperty("datetimeutc", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetimeutc { get; set; }
+
+    [JsonProperty("timetype", NullValueHandling = NullValueHandling.Ignore)]
+    public string Timetype { get; set; }
+
+    [JsonProperty("precipitationmm", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitationmm { get; set; }
+
+    [JsonProperty("mintemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Mintemperature { get; set; }
+
+    [JsonProperty("maxtemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Maxtemperature { get; set; }
+
+    [JsonProperty("cloudcover", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Cloudcover { get; set; }
+
+    [JsonProperty("iconcode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Iconcode { get; set; }
+
+    [JsonProperty("iconid", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Iconid { get; set; }
+
+    [JsonProperty("sources", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sources { get; set; }
+
+    [JsonProperty("winddirection", NullValueHandling = NullValueHandling.Ignore)]
+    public string Winddirection { get; set; }
+
+    [JsonProperty("winddirectiondegrees", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Winddirectiondegrees { get; set; }
+
+    [JsonProperty("windspeedms", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Windspeedms { get; set; }
+
+    [JsonProperty("visibility", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Visibility { get; set; }
+
+    [JsonProperty("precipitation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitation { get; set; }
+
+    [JsonProperty("beaufort", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Beaufort { get; set; }
+
+    [JsonProperty("humidity", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Humidity { get; set; }
+
+    [JsonProperty("sunshine", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshine { get; set; }
+
+    [JsonProperty("hour", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Hour { get; set; }
+
+    [JsonProperty("mintemp", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Mintemp { get; set; }
+
+    [JsonProperty("maxtemp", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Maxtemp { get; set; }
+
+    [JsonProperty("windspeed", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Windspeed { get; set; }
+
+    [JsonProperty("sunshinepower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshinepower { get; set; }
+
+    [JsonProperty("sunpower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunpower { get; set; }
+}
+
+public partial class Hour
+{
+    [JsonProperty("datetime", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetime { get; set; }
+
+    [JsonProperty("datetimeutc", NullValueHandling = NullValueHandling.Ignore)]
+    public string Datetimeutc { get; set; }
+
+    [JsonProperty("timetype", NullValueHandling = NullValueHandling.Ignore)]
+    public string Timetype { get; set; }
+
+    [JsonProperty("precipitationmm", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Precipitationmm { get; set; }
+
+    [JsonProperty("temperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Temperature { get; set; }
+
+    [JsonProperty("feeltemperature", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Feeltemperature { get; set; }
+
+    [JsonProperty("cloudcover", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Cloudcover { get; set; }
+
+    [JsonProperty("iconcode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Iconcode { get; set; }
+
+    [JsonProperty("iconid", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Iconid { get; set; }
+
+    [JsonProperty("sources", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sources { get; set; }
+
+    [JsonProperty("winddirection", NullValueHandling = NullValueHandling.Ignore)]
+    public string Winddirection { get; set; }
+
+    [JsonProperty("winddirectiondegrees", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Winddirectiondegrees { get; set; }
+
+    [JsonProperty("windspeedms", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Windspeedms { get; set; }
+
+    [JsonProperty("visibility", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Visibility { get; set; }
+
+    [JsonProperty("precipitation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Precipitation { get; set; }
+
+    [JsonProperty("beaufort", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Beaufort { get; set; }
+
+    [JsonProperty("humidity", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Humidity { get; set; }
+
+    [JsonProperty("sunshine", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshine { get; set; }
+
+    [JsonProperty("hour", NullValueHandling = NullValueHandling.Ignore)]
+    public long? HourHour { get; set; }
+
+    [JsonProperty("pollenindex", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Pollenindex { get; set; }
+
+    [JsonProperty("windspeed", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Windspeed { get; set; }
+
+    [JsonProperty("sunshinepower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunshinepower { get; set; }
+
+    [JsonProperty("sunpower", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Sunpower { get; set; }
+}
+
+public partial class Location
+{
+    [JsonProperty("lat", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Lat { get; set; }
+
+    [JsonProperty("lon", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Lon { get; set; }
+}
+
+public partial class Nowrelevant
+{
+    [JsonProperty("values", NullValueHandling = NullValueHandling.Ignore)]
+    public Value[] Values { get; set; }
+}
+
+public partial class Value
+{
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+    public string Type { get; set; }
+
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
+    public double? ValueValue { get; set; }
+}
+
+public partial class SearchResult
+{
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Id { get; set; }
+
+    [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+    public string Name { get; set; }
+
+    [JsonProperty("asciiname", NullValueHandling = NullValueHandling.Ignore)]
+    public string Asciiname { get; set; }
+
+    [JsonProperty("alternatenames", NullValueHandling = NullValueHandling.Ignore)]
+    public string[] Alternatenames { get; set; }
+
+    [JsonProperty("countrycode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Countrycode { get; set; }
+
+    [JsonProperty("country", NullValueHandling = NullValueHandling.Ignore)]
+    public string Country { get; set; }
+
+    [JsonProperty("featurecode", NullValueHandling = NullValueHandling.Ignore)]
+    public string Featurecode { get; set; }
+
+    [JsonProperty("location", NullValueHandling = NullValueHandling.Ignore)]
+    public Location Location { get; set; }
+
+    [JsonProperty("boundaries")]
+    public object Boundaries { get; set; }
+
+    [JsonProperty("altitude", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Altitude { get; set; }
+
+    [JsonProperty("elevation", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Elevation { get; set; }
+
+    [JsonProperty("weatherstationid", NullValueHandling = NullValueHandling.Ignore)]
+    public long? Weatherstationid { get; set; }
+
+    [JsonProperty("weatherstationdistance", NullValueHandling = NullValueHandling.Ignore)]
+    public double? Weatherstationdistance { get; set; }
+
+    [JsonProperty("continent", NullValueHandling = NullValueHandling.Ignore)]
+    public string Continent { get; set; }
+
+    [JsonProperty("foad", NullValueHandling = NullValueHandling.Ignore)]
+    public Foad Foad { get; set; }
+
+    [JsonProperty("hidefromsearch", NullValueHandling = NullValueHandling.Ignore)]
+    public string Hidefromsearch { get; set; }
+}
+
+public partial class Foad
+{
+    [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+    public string Name { get; set; }
+
+    [JsonProperty("code", NullValueHandling = NullValueHandling.Ignore)]
+    public string Code { get; set; }
+}
