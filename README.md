@@ -11,5 +11,5 @@ Discord bot for control over the VLC Lua web interface
 3. From here, on the view on the right, enable the **Lua interpreter** and the **Web** checkbox. Make sure to set a password at **Interface** -> **Main interfaces** -> **Lua**
 4. Make sure to save the changed settings by clicking on **Save**.
 5. In **program.cs**, you change the IP adres in the variables **playlist_url** and **status_url**, to the IP adres of the computer you're running VLC player on.
-6. In **program.cs**, specifically in `var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
+6. In **program.cs**, specifically in `var byteArray = Encoding.ASCII.GetBytes(":[password]");
         httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));`, Change the value after the ':' character in the GetBytes method to the password you set in your VLC preferences.
