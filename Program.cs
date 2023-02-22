@@ -29,7 +29,7 @@ internal class Program
         httpClient = new HttpClient();
         discordClient = new DiscordClient(StandardConfig);
 
-        var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
+        var byteArray = Encoding.ASCII.GetBytes(":[password]");
         httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
 
         await LoadStatusAsync();
