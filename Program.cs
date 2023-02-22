@@ -61,7 +61,7 @@ internal class Program
                         if (parts.Length > 2)
                             if (parts[3].Value != string.Empty)
                             {
-                                var query = FromGroups(parts[3..parts.Length]);
+                                var query = FromGroups(parts[3..parts.Length], "%20");
                                 var results = await GetAsync<SearchResult[]>($"https://location.buienradar.nl/1.1/location/search?query={query}");
 
                                 Console.WriteLine(query);
@@ -145,6 +145,20 @@ internal class Program
                         embed = new DiscordEmbedBuilder();
                         embed = GetHelp();
                         await internalMessage.Channel.SendMessageAsync(embed);
+                        break;
+
+                    case "!request":
+                        if (parts.Length > 2)
+                            if (parts[3].Value != string.Empty)
+                            {
+                                Console.WriteLine(parts[3].Value);
+                                var name = FromGroups(parts[3..parts.Length], " ");
+
+                                embed = new DiscordEmbedBuilder();
+                                embed = await MakeRequestAsync(name);
+
+                                await internalMessage.Channel.SendMessageAsync(embed);
+                            }
                         break;
                 }
             }
@@ -290,6 +304,38 @@ internal class Program
         return embedBuilder;
     }
 
+    public static async Task<DiscordEmbedBuilder> MakeRequestAsync(string name)
+    {
+        var requests = new Dictionary<int, string>();
+        if (File.Exists($"{AppDomain.CurrentDomain.BaseDirectory}\\requests.json"))
+        {
+            var text = await File.ReadAllTextAsync($"{AppDomain.CurrentDomain.BaseDirectory}\\requests.json");
+            requests = JsonConvert.DeserializeObject<Dictionary<int, string>>(text)
+                ?? throw new JsonException("Could not deserialize requests file content to dictionary");
+        }
+
+        if (requests.ContainsValue(name))
+        {
+            var embed = new DiscordEmbedBuilder();
+            var builder = new StringBuilder("This series or movie was already requested. Please try again with a different item that's not in the list yet. Or better yet, don't be a sad mindless idiot, idiot.");
+            builder.AppendLine(" ");
+            builder.AppendLine("Existing items in the request list:");
+            builder.AppendLine(" ");
+            foreach (var item in requests)
+            {
+                builder.AppendLine($"[{item.Key}]   {item.Value}");
+            }
+
+            embed.Description = builder.ToString();
+            return embed;
+        }
+
+        requests.Add(requests.Count, name);
+        await File.WriteAllTextAsync($"{AppDomain.CurrentDomain.BaseDirectory}\\requests.json", JsonConvert.SerializeObject(requests));
+
+        return new DiscordEmbedBuilder() { Description = $"{name} was added to the requests list" };
+    }
+
     public static async Task LoadStatusAsync()
     {
         Status = await GetAsync<Status>(statusUrl);
@@ -326,6 +372,8 @@ internal class Program
         builder.AppendLine("**!skip *[id]* ** __*//*__ Skips to the next item in the playlist, or the optionally given [id] index");
         builder.AppendLine("**!previous** __*//*__ Goes back to previous item in the playlist");
         builder.AppendLine("**!guide** __*//*__ Shows tv-style guide for the next items in the queue");
+        builder.AppendLine("**!request *[name]* ** __*//*__ Make a request for a series or movie to be added");
+        builder.AppendLine("**!weather *[location]* ** __*//*__ Show observational, and forecasted weather data for the given location");
         builder.AppendLine();
 
         return builder.ToString();
@@ -618,9 +666,12 @@ internal class Program
         var builder = new StringBuilder();
         builder.AppendLine();
 
+        var tsSunrise = DateTime.Parse(day0.Sunrise).TimeOfDay;
+        var tsSunset = DateTime.Parse(day0.Sunset).TimeOfDay;
+
         builder.AppendLine($"Observations for **{SearchResult?.Name}**");
         builder.AppendLine();
-        builder.AppendLine($"Sunrise: **{day0?.Sunrise}** __*//*__ Sunset: **{day0?.Sunset}**");
+        builder.AppendLine($"Sunrise: **{FixInt(tsSunrise.Hours)}:{FixInt(tsSunrise.Minutes)}** __*//*__ Sunset: **{FixInt(tsSunset.Hours)}:{FixInt(tsSunset.Minutes)}**");
         builder.AppendLine();
         builder.AppendLine("**Temperature (°C)**");
         builder.AppendLine($"Temperature: **{Observation?.Temperature}°**");
@@ -646,7 +697,9 @@ internal class Program
         builder.AppendLine("**Forecast per hour**");
         foreach (Hour hour in day0?.Hours)
         {
-            builder.AppendLine($"**{hour.Datetime}** - **{GetWeatherText(hour.Iconcode)}** - Cloud cover: **{hour.Cloudcover}%**");
+            var tsHour = DateTime.Parse(hour.Datetimeutc).TimeOfDay;
+
+            builder.AppendLine($"**{FixInt(tsHour.Hours)}:{FixInt(tsHour.Minutes)}** - **{GetWeatherText(hour.Iconcode)}** - Cloud cover: **{hour.Cloudcover}%**");
             builder.AppendLine($"Temp: **{hour.Temperature}°**, Wind: **{hour.Beaufort} Bft** from the **{hour.Winddirection}**, Precipitation: **{hour.Precipitationmm} mm**");
             builder.AppendLine();
         }
@@ -805,14 +858,14 @@ S(?<SeasonD>\d{1,2})E(?<EpisodeD>\d{1,2})
         MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug,
     };
 
-    private static string FromGroups(Group[] groups)
+    private static string FromGroups(Group[] groups, string delimeter)
     {
         var builder = new StringBuilder();
         foreach (var group in groups)
         {
             if (!builder.ToString().Contains(group.Value))
             {
-                builder.Append($"%20{group.Value}");
+                builder.Append($"{delimeter}{group.Value}");
             }
         }
 
