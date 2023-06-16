@@ -5,7 +5,12 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VlcControll", "VlcControll.csproj", "{6608C2C2-B9B1-4581-AC16-30D8A0FBA645}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "buienradaricondownloader", "..\buienradaricondownloader\buienradaricondownloader.csproj", "{1D30EDDF-BB1A-4A1A-8245-965E939C4EDC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "buienradaricondownloader", "..\buienradaricondownloader\buienradaricondownloader.csproj", "{1D30EDDF-BB1A-4A1A-8245-965E939C4EDC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{56C4A8A7-D2A1-4648-B7D7-45E524D20539}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

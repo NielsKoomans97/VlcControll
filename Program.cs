@@ -4,9 +4,11 @@ using Newtonsoft.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using VLC_Media.MediaParser;
 
 internal class Program
 {
+    public static PlaylistSearcher? PlaylistSearcher;
     public static Playlist? Playlist;
     public static Status? Status;
     public static Observation? Observation;
@@ -29,17 +31,20 @@ internal class Program
         httpClient = new HttpClient();
         discordClient = new DiscordClient(StandardConfig);
 
-        var byteArray = Encoding.ASCII.GetBytes(":[password]");
+        var byteArray = Encoding.ASCII.GetBytes(":F!nley19g7");
         httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
 
         await LoadStatusAsync();
         await LoadPlaylistAsync();
 
+        PlaylistSearcher = new PlaylistSearcher(Playlist);
+
+        var embed = new DiscordEmbedBuilder();
+
         discordClient.MessageCreated += async (sender, message) =>
         {
             var internalMessage = message.Message;
             var content = internalMessage.Content;
-            var embed = new DiscordEmbedBuilder();
 
             //await GetStatusAsync();
             //await GetGuideAsync();
@@ -49,25 +54,20 @@ internal class Program
                 await message.Channel.TriggerTypingAsync();
 
                 var parts = ExtractCommand(content);
+                Console.WriteLine(parts.Length);
 
-                switch (parts[1].Value)
+                foreach (Group part in parts)
+                    Console.WriteLine($"{part.Index} {part.Value}");
+
+                switch (parts[0].Value.ToLower())
                 {
                     case "!weather":
-                        Console.WriteLine(parts.Length);
 
-                        foreach (Group part in parts)
-                            Console.WriteLine($"{part.Index} {part.Value}");
-
-                        if (parts.Length > 2)
-                            if (parts[3].Value != string.Empty)
+                        if (parts.Length > 1)
+                            if (parts[1].Value != string.Empty)
                             {
-                                var query = FromGroups(parts[3..parts.Length], "%20");
+                                var query = FromGroups(parts[1..parts.Length], "%20");
                                 var results = await GetAsync<SearchResult[]>($"https://location.buienradar.nl/1.1/location/search?query={query}");
-
-                                Console.WriteLine(query);
-
-                                foreach (SearchResult result in results)
-                                    Console.WriteLine($"{result.Name} {result.Weatherstationid}");
 
                                 if (!results.Any())
                                 {
@@ -76,7 +76,7 @@ internal class Program
 
                                 SearchResult = results.FirstOrDefault();
 
-                                embed = new DiscordEmbedBuilder();
+                                embed.ClearFields();
                                 embed = await GetWeatherAsync();
 
                                 await internalMessage.Channel.SendMessageAsync(embed);
@@ -84,23 +84,20 @@ internal class Program
                         break;
 
                     case "!skip":
-                        //Console.WriteLine(parts.Length);
-
-                        //foreach (Group part in parts)
-                        //    Console.WriteLine($"{part.Index} {part.Value}");
-
-                        if (parts.Length > 2)
-                            if (parts[3].Value != string.Empty)
+                        if (parts.Length > 1)
+                        {
+                            if (parts[1].Value != string.Empty)
                             {
-                                Console.WriteLine(parts[3].Value);
+                                Console.WriteLine(parts[1].Value);
 
-                                var index = Convert.ToInt32(parts[3].Value);
+                                var index = Convert.ToInt32(parts[1].Value);
                                 var item = Playlist.Items.FirstOrDefault(item => item.Value.Id == index);
 
                                 Console.WriteLine(item.Value.Id);
 
                                 if (item.Value != null)
                                 {
+                                    embed.ClearFields();
                                     embed = await SkipAsync(item.Value);
                                     await internalMessage.Channel.SendMessageAsync(embed);
                                 }
@@ -109,52 +106,53 @@ internal class Program
                                     await internalMessage.Channel.SendMessageAsync("No item was found with the given ID");
                                 }
                             }
-                            else
-                            {
-                                embed = new DiscordEmbedBuilder();
-                                embed = await SkipAsync();
-                                await internalMessage.Channel.SendMessageAsync(embed);
-                            }
+                        }
+                        else
+                        {
+                            embed.ClearFields();
+                            embed = await SkipAsync();
+                            await internalMessage.Channel.SendMessageAsync(embed);
+                        }
                         break;
 
                     case "!play":
-                        embed = new DiscordEmbedBuilder();
+                        embed.ClearFields();
                         embed = await PlayAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!pause":
-                        embed = new DiscordEmbedBuilder();
+                        embed.ClearFields();
                         embed = await PauseAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!status":
-                        embed = new DiscordEmbedBuilder();
+                        embed.ClearFields();
                         embed = await GetStatusAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!guide":
-                        embed = new DiscordEmbedBuilder();
+                        embed.ClearFields();
                         embed = await GetGuideAsync();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!help":
-                        embed = new DiscordEmbedBuilder();
+                        embed.ClearFields();
                         embed = GetHelp();
                         await internalMessage.Channel.SendMessageAsync(embed);
                         break;
 
                     case "!request":
-                        if (parts.Length > 2)
-                            if (parts[3].Value != string.Empty)
+                        if (parts.Length > 1)
+                            if (parts[1].Value != string.Empty)
                             {
-                                Console.WriteLine(parts[3].Value);
-                                var name = FromGroups(parts[3..parts.Length], " ");
+                                Console.WriteLine(parts[1].Value);
+                                var name = FromGroups(parts[1..parts.Length], " ");
 
-                                embed = new DiscordEmbedBuilder();
+                                embed.ClearFields();
                                 embed = await MakeRequestAsync(name);
 
                                 await internalMessage.Channel.SendMessageAsync(embed);
@@ -347,6 +345,18 @@ internal class Program
         Playlist = new Playlist(items.Children);
     }
 
+    //public static async Task<DiscordEmbedBuilder> SearchAsync(string query)
+    //{
+    //    if (string.IsNullOrWhiteSpace(query))
+    //        return new DiscordEmbedBuilder()
+    //        {
+    //            Description = "Het zoekveld was leeg"
+    //        };
+
+    //    var builder = new StringBuilder();
+    //    await PlaylistSearcher.Search(query);
+    //}
+
     public static DiscordEmbedBuilder GetHelp()
     {
         var embedBuilder = new DiscordEmbedBuilder()
@@ -369,7 +379,7 @@ internal class Program
         builder.AppendLine("**!help** __*//*__ Shows this overview");
         builder.AppendLine("**!play** __*//*__ Starts/resumes video playback");
         builder.AppendLine("**!pause** __*//*__ Pauses video playback");
-        builder.AppendLine("**!skip *[id]* ** __*//*__ Skips to the next item in the playlist, or the optionally given [id] index");
+        builder.AppendLine("**!skip *[index]* ** __*//*__ Skips to the next item in the playlist, you can also skip to a specific item when you also give an **index** parameter. Here you need to get the index number of the item you want to skip to, you can see this in the **Guide** function next to **Index: **.");
         builder.AppendLine("**!previous** __*//*__ Goes back to previous item in the playlist");
         builder.AppendLine("**!guide** __*//*__ Shows tv-style guide for the next items in the queue");
         builder.AppendLine("**!request *[name]* ** __*//*__ Make a request for a series or movie to be added");
@@ -387,42 +397,10 @@ internal class Program
         if (Status != null)
         {
             Group[] mediaInfo = ParseMediaInfo(Status.Information.Category.Meta.Filename);
-            var name = mediaInfo
-               .FirstOrDefault(group =>
-               {
-                   if (group.Name.Contains("ShowName") && group.Value != null)
-                   {
-                       return true;
-                   }
-
-                   return false;
-               });
-            var year = mediaInfo
-            .FirstOrDefault(group =>
-            {
-                if (group.Name.Contains("ShowYear") && group.Value != null)
-                    return true;
-
-                return false;
-            });
-            var season = mediaInfo
-            .FirstOrDefault(group =>
-            {
-                if (group.Name.Contains("Season") && group.Value != string.Empty)
-                    return true;
-
-                return false;
-            });
-            var episode = mediaInfo
-            .FirstOrDefault(group =>
-            {
-                if (group.Name.Contains("Episode") && group.Value != string.Empty)
-                {
-                    return true;
-                }
-
-                return false;
-            });
+            var name = mediaInfo.FirstOrDefault(group => group.Name == "title");
+            var year = mediaInfo.FirstOrDefault(group => group.Name == "year");
+            var episode = mediaInfo.FirstOrDefault(group => group.Name == "episode");
+            var season = mediaInfo.FirstOrDefault(group => group.Name == "season");
 
             var pos = TimeSpan.FromSeconds(Status.Position);
             var len = TimeSpan.FromSeconds(Status.Length);
@@ -434,9 +412,15 @@ internal class Program
             if (name != null)
             {
                 if (name.Value != string.Empty)
-                    builder.Append($"[{Status.Id}] {CleanShowName(name.Value)}");
+                {
+                    builder.AppendLine($"{CleanShowName(name.Value)}");
+                    builder.AppendLine($"Index **{Status.Id}**");
+                }
                 else
-                    builder.Append($"[{Status.Id}] {Status.Information.Title}");
+                {
+                    builder.AppendLine($"{Status.Information.Title}");
+                    builder.AppendLine($"Index ** {Status.Id} **");
+                }
             }
             else
             {
@@ -447,18 +431,17 @@ internal class Program
             {
                 if (year.Value != string.Empty)
                     builder.AppendLine($" **({year.Value})**");
-                else
-                    builder.AppendLine();
-            }
-            else
-            {
-                builder.AppendLine();
+                //else
+                //    builder.AppendLine();
             }
 
             if (episode != null)
             {
                 if (episode.Value != string.Empty)
-                    builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
+                {
+                    builder.AppendLine($"Season **{season.Value}**");
+                    builder.AppendLine($"Episode **{episode.Value}**");
+                }
             }
 
             builder.AppendLine($"{FixInt(pos.Hours)}:{FixInt(pos.Minutes)}:{FixInt(pos.Seconds)} - {FixInt(len.Hours)}:{FixInt(len.Minutes)}:{FixInt(len.Seconds)}");
@@ -479,47 +462,15 @@ internal class Program
 
         if (Playlist != null)
         {
-            var index = GetIndexFromItem(Status.Information.Category.Meta.Filename);
+            var index = GetIndexFromItem();
 
             #region Write status
 
             Group[] mediaInfo = ParseMediaInfo(Status.Information.Category.Meta.Filename);
-            var name = mediaInfo
-               .FirstOrDefault(group =>
-               {
-                   if (group.Name.Contains("ShowName") && group.Value != null)
-                   {
-                       return true;
-                   }
-
-                   return false;
-               });
-            var year = mediaInfo
-            .FirstOrDefault(group =>
-            {
-                if (group.Name.Contains("ShowYear") && group.Value != null)
-                    return true;
-
-                return false;
-            });
-            var season = mediaInfo
-            .FirstOrDefault(group =>
-            {
-                if (group.Name.Contains("Season") && group.Value != string.Empty)
-                    return true;
-
-                return false;
-            });
-            var episode = mediaInfo
-            .FirstOrDefault(group =>
-            {
-                if (group.Name.Contains("Episode") && group.Value != string.Empty)
-                {
-                    return true;
-                }
-
-                return false;
-            });
+            var name = mediaInfo.FirstOrDefault(group => group.Name == "title");
+            var year = mediaInfo.FirstOrDefault(group => group.Name == "year");
+            var episode = mediaInfo.FirstOrDefault(group => group.Name == "episode");
+            var season = mediaInfo.FirstOrDefault(group => group.Name == "season");
 
             var pos = TimeSpan.FromSeconds(Status.Position);
             var len = TimeSpan.FromSeconds(Status.Length);
@@ -531,9 +482,15 @@ internal class Program
             if (name != null)
             {
                 if (name.Value != string.Empty)
-                    builder.Append($"[{Status.Id}] {CleanShowName(name.Value)}");
+                {
+                    builder.AppendLine($"{CleanShowName(name.Value)}");
+                    builder.AppendLine($"Index **{Status.Id}**");
+                }
                 else
-                    builder.Append($"[{Status.Id}] {Status.Information.Title}");
+                {
+                    builder.AppendLine($"{Status.Information.Title}");
+                    builder.AppendLine($"Index ** {Status.Id} **");
+                }
             }
             else
             {
@@ -544,18 +501,17 @@ internal class Program
             {
                 if (year.Value != string.Empty)
                     builder.AppendLine($" **({year.Value})**");
-                else
-                    builder.AppendLine();
-            }
-            else
-            {
-                builder.AppendLine();
+                //else
+                //    builder.AppendLine();
             }
 
             if (episode != null)
             {
                 if (episode.Value != string.Empty)
-                    builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
+                {
+                    builder.AppendLine($"Season **{season.Value}**");
+                    builder.AppendLine($"Episode **{episode.Value}**");
+                }
             }
 
             builder.AppendLine($"{FixInt(pos.Hours)}:{FixInt(pos.Minutes)}:{FixInt(pos.Seconds)} - {FixInt(len.Hours)}:{FixInt(len.Minutes)}:{FixInt(len.Seconds)}");
@@ -573,42 +529,10 @@ internal class Program
                 if (item.Value.Uri != null)
                 {
                     mediaInfo = ParseMediaInfo(HttpUtility.UrlDecode(Path.GetFileName(item.Value.Uri)));
-                    name = mediaInfo
-                      .FirstOrDefault(group =>
-                      {
-                          if (group.Name.Contains("ShowName") && group.Value != null)
-                          {
-                              return true;
-                          }
-
-                          return false;
-                      });
-                    year = mediaInfo
-                   .FirstOrDefault(group =>
-                   {
-                       if (group.Name.Contains("ShowYear") && group.Value != null)
-                           return true;
-
-                       return false;
-                   });
-                    season = mediaInfo
-                   .FirstOrDefault(group =>
-                   {
-                       if (group.Name.Contains("Season") && group.Value != string.Empty)
-                           return true;
-
-                       return false;
-                   });
-                    episode = mediaInfo
-                   .FirstOrDefault(group =>
-                   {
-                       if (group.Name.Contains("Episode") && group.Value != string.Empty)
-                       {
-                           return true;
-                       }
-
-                       return false;
-                   });
+                    name = mediaInfo.FirstOrDefault(group => group.Name == "title");
+                    year = mediaInfo.FirstOrDefault(group => group.Name == "year");
+                    episode = mediaInfo.FirstOrDefault(group => group.Name == "episode");
+                    season = mediaInfo.FirstOrDefault(group => group.Name == "season");
 
                     var itemPosPlusDuration = itemPos + TimeSpan.FromSeconds(item.Value.Duration);
 
@@ -617,9 +541,15 @@ internal class Program
                     if (name != null)
                     {
                         if (name.Value != string.Empty)
-                            builder.Append($"[{item.Value.Id}] {CleanShowName(name.Value)}");
+                        {
+                            builder.AppendLine($"{CleanShowName(name.Value)}");
+                            builder.AppendLine($"Index **{item.Value.Id}**");
+                        }
                         else
-                            builder.Append($"[{item.Value.Id}] {item.Value.Name}");
+                        {
+                            builder.AppendLine($"{item.Value.Name}");
+                            builder.AppendLine($"Index **{item.Value.Id}**");
+                        }
                     }
                     else
                     {
@@ -630,18 +560,17 @@ internal class Program
                     {
                         if (year.Value != string.Empty)
                             builder.AppendLine($" **({year.Value})**");
-                        else
-                            builder.AppendLine();
-                    }
-                    else
-                    {
-                        builder.AppendLine();
+                        //else
+                        //    builder.AppendLine();
                     }
 
                     if (episode != null)
                     {
                         if (episode.Value != string.Empty)
-                            builder.AppendLine($"Season **{season.Value}** __*//*__ Episode **{episode.Value}**");
+                        {
+                            builder.AppendLine($"Season **{season.Value}**");
+                            builder.AppendLine($"Episode **{episode.Value}**");
+                        }
                     }
 
                     builder.AppendLine();
@@ -714,33 +643,20 @@ internal class Program
 
     #region Other functionality
 
-    private static int GetIndexFromItem(string filename)
+    private static int GetIndexFromItem()
     {
         if (Playlist != null)
         {
-            Console.WriteLine(filename);
-
             for (int i = 0; i < Playlist.Items.Count; i++)
             {
-                if (Playlist.Items[i].Uri != null)
-                {
-                    var path = HttpUtility.UrlDecode(Path.GetFileName(Playlist.Items[i].Uri));
-
-                    Console.WriteLine(path);
-
-                    if (path.Contains(filename))
-                    {
-                        Console.WriteLine($"Found! {path}");
-
-                        return i;
-                    }
-                }
+                if (Playlist.Items[i].Id == Status.Id)
+                    return i;
             }
         }
 
         Console.WriteLine("Playlist was null");
 
-        throw new NullReferenceException(nameof(filename));
+        throw new NullReferenceException(nameof(Status));
     }
 
     private static string FixInt(int value)
@@ -755,34 +671,27 @@ internal class Program
 
     public static Group[] ParseMediaInfo(string fileName)
     {
-        Console.WriteLine(fileName);
-        string pattern = @"^((?<ShowNameA>.*[^ (_.]) [ (_.]+ (?!720p|1080p|x264|x265)
-(
-# Shows with preceding Year
-#(?<ShowYearA>\d{4}) ([ (_.]+ (
-(?<ShowYearA>(?:19|20)\d{2}) ([ (_.]+ (
-(?<SeasonA>\d{1,2})x(?<EpisodeA>\d{1,2})
-|(?<SeasonB>[0-3]?[0-9])(?<EpisodeB>\d{2})
-|S(?<SeasonC>\d{1,2})E(?<EpisodeC>\d{1,2}) ) )?
+        var groups = new List<Group>();
 
-| # Shows without preceding Year
- (?<!\d{4})(
-S(?<SeasonD>\d{1,2})E(?<EpisodeD>\d{1,2})
-|(?<SeasonF>[0-3]?[0-9])(?<EpisodeF>\d{2})
-|(?<SeasonE>\d{1,2})x(?<EpisodeE>\d{1,2}))
+        groups.AddRange(RegexData.ReportTitleRegex
+            .Where(regex =>
+            {
+                if (regex.IsMatch(fileName))
+                {
+                    return true;
+                }
 
-)
-|(?<ShowNameB>.+))
-";
-        RegexOptions options = RegexOptions.Multiline | RegexOptions.IgnorePatternWhitespace | RegexOptions.IgnoreCase;
+                return false;
+            })
+            .OrderByDescending(regex => regex.Match(fileName).Groups.Count)
+            .FirstOrDefault()
+            .Match(fileName)
+            .Groups);
 
-        if (Regex.IsMatch(fileName, pattern, options))
-        {
-            var mts = Regex.Match(fileName, pattern, options);
-            return mts.Groups.Values.ToArray();
-        }
+        groups.AddRange(RegexData.YearInTitleRegex
+            .Match(fileName).Groups);
 
-        throw new Exception("No valid media filename inserted");
+        return groups.ToArray();
     }
 
     public static string CleanShowName(string showName)
@@ -836,7 +745,7 @@ S(?<SeasonD>\d{1,2})E(?<EpisodeD>\d{1,2})
             {
                 foreach (Group group in match.Groups)
                 {
-                    if (!groupList.Contains(group))
+                    if (!groupList.Any(grp => grp.Value == group.Value))
                     {
                         groupList.Add(group);
                     }
@@ -873,4 +782,48 @@ S(?<SeasonD>\d{1,2})E(?<EpisodeD>\d{1,2})
     }
 
     #endregion Other functionality
+}
+
+public class PlaylistSearcher
+{
+    public Playlist? Playlist;
+
+    public PlaylistSearcher(Playlist? playlist)
+    {
+        Playlist = playlist;
+    }
+
+    private List<KeyValuePair<int, Item>> results = new List<KeyValuePair<int, Item>>();
+
+    public Task Search(string query)
+    {
+        if (Playlist == null)
+            return Task.CompletedTask;
+
+        Array.ForEach(Playlist.Items.ToArray(), async item =>
+        {
+            await Task.Run(() => SearchChildren(item.Value, query));
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private void SearchChildren(Item item, string query)
+    {
+        if (item.Children.Any())
+        {
+            foreach (var child in item.Children)
+            {
+                if (child.Name.Contains(query))
+                {
+                    results.Add(new KeyValuePair<int, Item>(results.Count, child));
+                }
+
+                if (child.Children.Any())
+                {
+                    SearchChildren(child, query);
+                }
+            }
+        }
+    }
 }
