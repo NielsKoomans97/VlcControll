@@ -115,6 +115,76 @@ internal class Program
                         }
                         break;
 
+                    case "!search":
+                        embed.ClearFields();
+
+                        var terms = parts[0];
+
+                        var episode = parts
+                            .FirstOrDefault(part => part.Value.StartsWith("episode"))?
+                            .Value;
+                        var season = parts
+                            .FirstOrDefault(part => part.Value.StartsWith("season"))?
+                            .Value;
+                        var year = parts
+                            .FirstOrDefault(part => part.Value.StartsWith("year"))?
+                            .Value;
+
+                        var yearValue = string.Empty;
+                        var episodeValue = string.Empty;
+                        var seasonEpisiode = string.Empty;
+
+                        if (episode != null)
+                        {
+                            episodeValue = episode.Split('=')[1];
+                        }
+
+                        if (year != null)
+                        {
+                            yearValue = year.Split("=")[1];
+                        }
+
+                        if (season != null)
+                        {
+                            seasonEpisiode = season.Split("=")[1];
+                        }
+
+                        var squery = new SearchQuery(terms.Value);
+
+                        if (squery == null)
+                            await internalMessage.Channel.SendMessageAsync("Zoekveld was leeg");
+
+                        await PlaylistSearcher.Search(squery);
+
+                        PlaylistSearcher.SearchCompleted += async (s, e) =>
+                        {
+                            var builder = new StringBuilder();
+
+                            foreach (var result in e.Results)
+                            {
+                                Group[] mediaInfo = ParseMediaInfo(result.Value.Name);
+                                var name = mediaInfo.FirstOrDefault(group => group.Name == "title");
+                                var year = mediaInfo.FirstOrDefault(group => group.Name == "year");
+                                var episode = mediaInfo.FirstOrDefault(group => group.Name == "episode");
+                                var season = mediaInfo.FirstOrDefault(group => group.Name == "season");
+
+                                builder.AppendLine($"**{name.Value}**");
+                                builder.AppendLine($"Index **{result.Key}**");
+                                builder.AppendLine($"Episode **{episode.Value}**");
+                                builder.AppendLine($"Season **{season.Value}**");
+                                builder.AppendLine();
+                            }
+
+                            embed = new DiscordEmbedBuilder()
+                            {
+                                Description = builder.ToString()
+                            };
+
+                            await internalMessage.Channel.SendMessageAsync(embed);
+                        };
+
+                        break;
+
                     case "!play":
                         embed.ClearFields();
                         embed = await PlayAsync();
@@ -345,17 +415,41 @@ internal class Program
         Playlist = new Playlist(items.Children);
     }
 
-    //public static async Task<DiscordEmbedBuilder> SearchAsync(string query)
-    //{
-    //    if (string.IsNullOrWhiteSpace(query))
-    //        return new DiscordEmbedBuilder()
-    //        {
-    //            Description = "Het zoekveld was leeg"
-    //        };
+    public static async Task<DiscordEmbedBuilder> SearchAsync(SearchQuery query)
+    {
+        if (query == null)
+            return new DiscordEmbedBuilder()
+            {
+                Description = "Het zoekveld was leeg"
+            };
 
-    //    var builder = new StringBuilder();
-    //    await PlaylistSearcher.Search(query);
-    //}
+        var builder = new StringBuilder();
+
+        PlaylistSearcher.SearchCompleted += (s, e) =>
+        {
+            foreach (var result in e.Results)
+            {
+                Group[] mediaInfo = ParseMediaInfo(result.Value.Name);
+                var name = mediaInfo.FirstOrDefault(group => group.Name == "title");
+                var year = mediaInfo.FirstOrDefault(group => group.Name == "year");
+                var episode = mediaInfo.FirstOrDefault(group => group.Name == "episode");
+                var season = mediaInfo.FirstOrDefault(group => group.Name == "season");
+
+                builder.AppendLine($"**{name.Value}**");
+                builder.AppendLine($"Index **{result.Key}**");
+                builder.AppendLine($"Episode **{episode.Value}**");
+                builder.AppendLine($"Season **{season.Value}**");
+                builder.AppendLine();
+            }
+        };
+
+        await PlaylistSearcher.Search(query);
+
+        return new DiscordEmbedBuilder()
+        {
+            Description = builder.ToString()
+        };
+    }
 
     public static DiscordEmbedBuilder GetHelp()
     {
@@ -784,9 +878,27 @@ internal class Program
     #endregion Other functionality
 }
 
+public class SearchQuery
+{
+    public string SearchTerms { get; set; }
+    public string Episode { get; set; }
+    public string Season { get; set; }
+    public string Year { get; set; }
+
+    public SearchQuery(string searchTerms, string episode = "", string season = "", string year = "")
+    {
+        SearchTerms = searchTerms ?? throw new ArgumentNullException(nameof(searchTerms));
+        Episode = episode ?? throw new ArgumentNullException(nameof(episode));
+        Season = season ?? throw new ArgumentNullException(nameof(season));
+        Year = year ?? throw new ArgumentNullException(nameof(year));
+    }
+}
+
 public class PlaylistSearcher
 {
     public Playlist? Playlist;
+
+    public event EventHandler<SearchCompletedEventArgs>? SearchCompleted;
 
     public PlaylistSearcher(Playlist? playlist)
     {
@@ -795,10 +907,12 @@ public class PlaylistSearcher
 
     private List<KeyValuePair<int, Item>> results = new List<KeyValuePair<int, Item>>();
 
-    public Task Search(string query)
+    public Task Search(SearchQuery query)
     {
         if (Playlist == null)
             return Task.CompletedTask;
+
+        results.Clear();
 
         Array.ForEach(Playlist.Items.ToArray(), async item =>
         {
@@ -808,22 +922,80 @@ public class PlaylistSearcher
         return Task.CompletedTask;
     }
 
-    private void SearchChildren(Item item, string query)
+    private Group[] ParseMediaInfo(string fileName)
     {
-        if (item.Children.Any())
-        {
-            foreach (var child in item.Children)
+        var groups = new List<Group>();
+
+        groups.AddRange(RegexData.ReportTitleRegex
+            .Where(regex =>
             {
-                if (child.Name.Contains(query))
+                if (regex.IsMatch(fileName))
+                {
+                    return true;
+                }
+
+                return false;
+            })
+            .OrderByDescending(regex => regex.Match(fileName).Groups.Count)
+            .FirstOrDefault()
+            .Match(fileName)
+            .Groups);
+
+        groups.AddRange(RegexData.YearInTitleRegex
+            .Match(fileName).Groups);
+
+        return groups.ToArray();
+    }
+
+    private void SearchChildren(Item item, SearchQuery query)
+    {
+        if (item.Children != null && item.Children.Any())
+        {
+            for (int i = 0; i < item.Children.Length; i++)
+            {
+                var child = item.Children[i];
+                if (child != null) continue;
+                var info = ParseMediaInfo(child.Name);
+                var title = info
+                    .FirstOrDefault(grp => grp.Name == "title")
+                    .Value;
+                var episode = info
+                    .FirstOrDefault(grp => grp.Name == "episode")
+                    .Value;
+                var season = info
+                    .FirstOrDefault(grp => grp.Name == "season")
+                    .Value;
+                var year = info
+                    .FirstOrDefault(grp => grp.Name == "year")
+                    .Value;
+
+                if (child.Name.Contains(title) && (episode == "01" && season == "01"))
                 {
                     results.Add(new KeyValuePair<int, Item>(results.Count, child));
                 }
 
-                if (child.Children.Any())
+                if (child.Children != null && child.Children.Any())
                 {
                     SearchChildren(child, query);
                 }
+                else
+                {
+                    if (i == item.Children.Length)
+                    {
+                        SearchCompleted?.Invoke(this, new SearchCompletedEventArgs(results));
+                    }
+                }
             }
         }
+    }
+}
+
+public class SearchCompletedEventArgs
+{
+    public List<KeyValuePair<int, Item>> Results { get; }
+
+    public SearchCompletedEventArgs(List<KeyValuePair<int, Item>> results)
+    {
+        Results = results ?? throw new ArgumentNullException(nameof(results));
     }
 }
